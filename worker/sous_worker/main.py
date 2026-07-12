@@ -26,7 +26,17 @@ def _apologize(conn, household_id: str, job_id: str) -> None:
     db.insert_chef_message(conn, household_id, message, job_id)
 
 
-def handle_chat_job(conn, job: db.Job, cfg: dict) -> str:
+def generate_chat_reply(conn, job: db.Job, cfg: dict) -> str:
+    """Fetch context and run the brain — reads only, no writes.
+
+    Deliberately kept outside any DB transaction: brain.run_brain() shells out
+    to `claude -p` and can block up to cfg["chat_timeout_sec"] (480s) for a
+    heavy turn. Holding a transaction open across that wait would leave the
+    connection idle-in-transaction for minutes, risking it getting killed by
+    a server-side idle_in_transaction_session_timeout or pooler timeout right
+    as generation finishes (see finding: worker now points at pooled/cloud
+    Postgres, not just local).
+    """
     ctx = context.fetch_context(conn, job.household_id, cfg["history_limit"])
     template = (ROOT / "prompts" / "chat.md").read_text()
     new_message = ""
@@ -35,10 +45,8 @@ def handle_chat_job(conn, job: db.Job, cfg: dict) -> str:
         if content is not None:
             new_message = f"user: {content}"
     prompt = context.build_chat_prompt(template, ctx, new_message or "(none)")
-    reply = brain.run_brain(prompt, model=cfg["chat_model"],
-                            timeout=cfg["chat_timeout_sec"])
-    db.insert_chef_message(conn, job.household_id, reply, job.id)
-    return reply
+    return brain.run_brain(prompt, model=cfg["chat_model"],
+                           timeout=cfg["chat_timeout_sec"])
 
 
 def process_one(conn, cfg: dict) -> bool:
@@ -51,12 +59,16 @@ def process_one(conn, cfg: dict) -> bool:
         return False
     try:
         if job.kind == "chat":
-            # Reply-insert (inside handle_chat_job) and job-completion must be
-            # atomic: if complete_job throws after the reply is written, the
-            # rollback here undoes the reply too, so a requeue-and-retry never
-            # produces a duplicate chef reply.
+            # The slow part (context fetch + the claude -p subprocess call)
+            # runs with no transaction open — see generate_chat_reply.
+            reply = generate_chat_reply(conn, job, cfg)
+            # Only the reply-insert and job-completion are atomic: if
+            # complete_job throws after the reply is written, the rollback
+            # here undoes the reply too, so a requeue-and-retry never
+            # produces a duplicate chef reply. This window is fast (two
+            # UPDATEs/INSERTs), so no idle-in-transaction risk.
             with conn.transaction():
-                reply = handle_chat_job(conn, job, cfg)
+                db.insert_chef_message(conn, job.household_id, reply, job.id)
                 db.complete_job(conn, job.id, {"reply_chars": len(reply)})
         else:
             raise ValueError(f"unknown job kind: {job.kind}")

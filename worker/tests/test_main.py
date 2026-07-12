@@ -64,8 +64,9 @@ def test_process_one_rolls_back_reply_if_complete_fails(conn, chat_job, monkeypa
 
     assert main.process_one(conn, _cfg()) is True
 
-    # the chef reply insert (a side effect of handle_chat_job) must have been
-    # rolled back along with the failed complete_job — no orphaned reply.
+    # the chef reply insert (done by process_one, before complete_job, inside
+    # the same transaction) must have been rolled back along with the failed
+    # complete_job — no orphaned reply.
     reply_count = conn.execute(
         "select count(*) from chat_messages where sender='chef'"
     ).fetchone()[0]
