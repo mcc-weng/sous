@@ -1,0 +1,9 @@
+{
+  "chat_model": "sonnet",
+  "chat_timeout_sec": 480,
+  "poll_interval_sec": 3,
+  "heartbeat_interval_sec": 15,
+  "stale_after_sec": 600,
+  "max_attempts": 2,
+  "history_limit": 20
+}
