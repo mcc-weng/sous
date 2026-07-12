@@ -1,0 +1,38 @@
+import os
+import stat
+
+import pytest
+
+from sous_worker import brain
+
+
+@pytest.fixture
+def fake_claude(tmp_path, monkeypatch):
+    """A stand-in claude binary that echoes a marker + first line of stdin."""
+    script = tmp_path / "claude"
+    script.write_text('#!/bin/sh\nread line\necho "FAKE-REPLY: $line"\n')
+    script.chmod(script.stat().st_mode | stat.S_IEXEC)
+    monkeypatch.setenv("CLAUDE_BIN", str(script))
+    return script
+
+
+def test_run_brain_returns_stdout(fake_claude):
+    assert brain.run_brain("你好") == "FAKE-REPLY: 你好"
+
+
+def test_run_brain_timeout_raises(tmp_path, monkeypatch):
+    script = tmp_path / "claude"
+    script.write_text("#!/bin/sh\nsleep 5\n")
+    script.chmod(script.stat().st_mode | stat.S_IEXEC)
+    monkeypatch.setenv("CLAUDE_BIN", str(script))
+    with pytest.raises(RuntimeError, match="timed out"):
+        brain.run_brain("hi", timeout=1)
+
+
+def test_run_brain_nonzero_exit_raises(tmp_path, monkeypatch):
+    script = tmp_path / "claude"
+    script.write_text("#!/bin/sh\necho boom >&2\nexit 3\n")
+    script.chmod(script.stat().st_mode | stat.S_IEXEC)
+    monkeypatch.setenv("CLAUDE_BIN", str(script))
+    with pytest.raises(RuntimeError, match="exited 3"):
+        brain.run_brain("hi")
