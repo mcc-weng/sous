@@ -2137,25 +2137,40 @@ Put the real `DEVELOPMENT_TEAM` in `ios/project.yml`, `xcodegen generate`, open 
 cd ~/Projects/sous/worker && uv run python -m sous_worker.main
 ```
 
-- [ ] **Step 3 (MANUAL — Mike): the actual test**
+- [x] **Step 3 (MANUAL — Mike): the actual test**
 
 On the phone: Sign in with Apple → counter shows tonight's seeded dish + "chef in" (heartbeat live) → send 「今晚吃什麼?怎麼煮?」.
 
 **Pass criteria (all four):**
-1. Reply arrives in the app via realtime (no manual refresh), in 小當家's voice.
-2. The reply names the correct seeded dish for today — he *knows the sandbox week*.
-3. Kill the worker → within ~60s the header flips to "chef out"; send a message → it queues (job row `queued`, no reply). Restart worker → reply arrives.
-4. Ask for a change (「今晚換吃麻婆豆腐」) → he acknowledges honestly that this version can't edit yet (no fake mutations — M1 is read-only).
+1. Reply arrives in the app via realtime (no manual refresh), in 小當家's voice. ✅
+2. The reply names the correct seeded dish for today — he *knows the sandbox week*. ✅
+3. Kill the worker → within ~60s the header flips to "chef out"; send a message → it queues (job row `queued`, no reply). Restart worker → reply arrives. ✅
+4. Ask for a change (「今晚換吃麻婆豆腐」) → he acknowledges honestly that this version can't edit yet (no fake mutations — M1 is read-only). ✅
 
-- [ ] **Step 4: record the result**
+- [x] **Step 4: record the result**
 
-Append a short verification note (date, what passed, any rough edges observed for M2) to the bottom of this plan file, and commit:
+## M1 exit test verification — 2026-07-13
+
+**Result: PASS — all four pass criteria held in real use, on Mike's physical iPhone against the cloud Supabase project.**
+
+- Criterion 1 (realtime, in-persona): reply arrived without manual refresh, in 小當家's voice, e.g. "今晚還是蔥香雞腿飯!🔥 雞腿記得已經退冰了吧——這道走「fast」路線,下班回來馬上就能上桌,別讓我等太久啊!"
+- Criterion 2 (knows the sandbox week): reply correctly named 蔥香雞腿飯 as tonight's dish.
+- Criterion 3 (presence + queue-while-down): killing the worker flipped the header to "chef out" within the presence threshold; a message sent while down showed the pending indicator indefinitely with no reply (job sat `status='queued'` in the DB, confirmed directly); restarting the worker delivered the queued reply and flipped the header back to "chef in".
+- Criterion 4 (honest about read-only): asked to change tonight to 麻婆豆腐 — chef acknowledged the request but honestly stated this version can't edit the menu yet, no fake mutation.
+- Bonus: asked "how do I cook it" (怎麼煮) for a recipe — chef correctly named the dish but honestly declined to fabricate cooking steps, since `context.py`'s `cookbook_index` only renders recipe titles, not full ingredients/steps (that's explicitly M2 scope — structured recipe steps + cook mode). Same "don't fabricate, admit the gap" instruction generalized correctly beyond the specific edit-request scenario the plan anticipated.
+
+**Rough edges observed for M2/M3 backlog (none of these broke a pass criterion):**
+- **Timezone skew is real, not just theoretical** (flagged as a Minor finding in the final whole-branch review, then actually hit live during this test): `context.py`'s week query relies on Postgres `current_date`, which evaluates in the DB's UTC session timezone, while the worker's `{today}`/`{weekday}` prompt fields are computed in Python using the household's local timezone (`Australia/Sydney`, UTC+10). For roughly the first ~10 hours of each Sydney day (until UTC also rolls over), the model would be told "today is <tomorrow's date>" while the DB-rendered week table still ends at UTC's current day — no matching row for "today" at all. Hit this exact window during this test (Sydney had rolled into Monday 2026-07-13; UTC was still on 2026-07-12) and worked around it by directly inserting the day-13 `plan_days` row into the still-current-per-UTC week bucket. **Real fix for M2:** make the week/day query timezone-aware (e.g. compute `current_date` as `(now() AT TIME ZONE household.timezone)::date` instead of bare `current_date`), so DB-side "today" and Python-side "today" always agree.
+- Cloud project ref mismatch during Task 9: the first project ref Mike gave (`jygbpfhyjczadqncjpwn`) wasn't accessible to the linked Supabase CLI account/org; a second project (`ftobrcxtbtdjgrrkavzb`, region ap-northeast-1) was used instead. Not an app bug, just an account/CLI auth note for next time.
+- UI is deliberately unstyled per M1 scope (Claude Design repaints in M3) — not a defect.
 
 ```bash
 cd ~/Projects/sous && git add docs/superpowers/plans/ && git commit -m "docs: M1 exit test verification notes"
 ```
 
 **M1 done = all four pass criteria hold in real use.** Rough edges that don't break the criteria (slow replies, ugly UI) are M2/M3 backlog, not M1 blockers.
+
+**✅ M1 「會說話的骨架」 is done.**
 
 ---
 
