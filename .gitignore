@@ -6,3 +6,7 @@
 xcuserdata/
 DerivedData/
 .superpowers/
+
+# Python
+__pycache__/
+*.pyc
