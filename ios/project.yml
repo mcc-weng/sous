@@ -28,7 +28,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikeweng.sous
         CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: REPLACE_WITH_TEAM_ID   # MANUAL: Mike's Apple Developer team id
+        DEVELOPMENT_TEAM: 9D37X3YV25
   SousTests:
     type: bundle.unit-test
     platform: iOS
