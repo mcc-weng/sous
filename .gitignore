@@ -5,6 +5,8 @@
 *.xcuserstate
 xcuserdata/
 DerivedData/
+ios/Sous.xcodeproj/
+ios/DerivedData/
 .superpowers/
 
 # Python

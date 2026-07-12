@@ -1,0 +1,47 @@
+name: Sous
+options:
+  bundleIdPrefix: com.mikeweng
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.0.0"
+targets:
+  Sous:
+    type: application
+    platform: iOS
+    sources: [Sous]
+    dependencies:
+      - package: Supabase
+        product: Supabase
+    entitlements:
+      path: Sous/Sous.entitlements
+      properties:
+        com.apple.developer.applesignin: [Default]
+    info:
+      path: Sous/Info.plist
+      properties:
+        UILaunchScreen: {}
+        CFBundleDisplayName: Sous
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikeweng.sous
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: REPLACE_WITH_TEAM_ID   # MANUAL: Mike's Apple Developer team id
+  SousTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [SousTests]
+    dependencies:
+      - target: Sous
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Sous:
+    build:
+      targets:
+        Sous: all
+    test:
+      targets: [SousTests]
