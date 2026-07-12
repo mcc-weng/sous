@@ -90,6 +90,19 @@ def insert_chef_message(conn, household_id: str, content: str,
     ).fetchone()[0]
 
 
+def get_job_household(conn, job_id: str) -> str:
+    return conn.execute(
+        "select household_id::text from jobs where id = %s", (job_id,)
+    ).fetchone()[0]
+
+
+def get_message_content(conn, message_id: str) -> str | None:
+    row = conn.execute(
+        "select content from chat_messages where id = %s", (message_id,)
+    ).fetchone()
+    return row[0] if row else None
+
+
 def get_household(conn, household_id: str) -> dict:
     row = conn.execute(
         "select h.name, h.timezone, p.prompt_pack, p.copy_pack "

@@ -50,6 +50,32 @@ def test_process_one_requeues_then_fails_with_apology(conn, chat_job, monkeypatc
     assert "🔥" in apology  # seeded copy_pack failure_message
 
 
+def test_process_one_rolls_back_reply_if_complete_fails(conn, chat_job, monkeypatch):
+    _, jid = chat_job
+
+    def fake_brain(prompt, model, timeout, allowed_tools="Read"):
+        return "今晚是蔥香雞腿飯!"
+
+    def broken_complete(*a, **kw):
+        raise RuntimeError("connection blip")
+
+    monkeypatch.setattr(main.brain, "run_brain", fake_brain)
+    monkeypatch.setattr(main.db, "complete_job", broken_complete)
+
+    assert main.process_one(conn, _cfg()) is True
+
+    # the chef reply insert (a side effect of handle_chat_job) must have been
+    # rolled back along with the failed complete_job — no orphaned reply.
+    reply_count = conn.execute(
+        "select count(*) from chat_messages where sender='chef'"
+    ).fetchone()[0]
+    assert reply_count == 0
+
+    # job is back to queued for a clean retry (attempts=1 < max_attempts=2)
+    status = conn.execute("select status from jobs where id=%s", (jid,)).fetchone()[0]
+    assert status == "queued"
+
+
 def test_process_one_idle_returns_false(conn):
     assert main.process_one(conn, _cfg()) is False
 

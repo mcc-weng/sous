@@ -31,12 +31,9 @@ def handle_chat_job(conn, job: db.Job, cfg: dict) -> str:
     template = (ROOT / "prompts" / "chat.md").read_text()
     new_message = ""
     if job.payload.get("message_id"):
-        row = conn.execute(
-            "select content from chat_messages where id = %s",
-            (job.payload["message_id"],),
-        ).fetchone()
-        if row:
-            new_message = f"user: {row[0]}"
+        content = db.get_message_content(conn, job.payload["message_id"])
+        if content is not None:
+            new_message = f"user: {content}"
     prompt = context.build_chat_prompt(template, ctx, new_message or "(none)")
     reply = brain.run_brain(prompt, model=cfg["chat_model"],
                             timeout=cfg["chat_timeout_sec"])
@@ -46,9 +43,7 @@ def handle_chat_job(conn, job: db.Job, cfg: dict) -> str:
 
 def process_one(conn, cfg: dict) -> bool:
     for job_id in db.requeue_stale(conn, cfg["stale_after_sec"], cfg["max_attempts"]):
-        hid = conn.execute(
-            "select household_id::text from jobs where id = %s", (job_id,)
-        ).fetchone()[0]
+        hid = db.get_job_household(conn, job_id)
         _apologize(conn, hid, job_id)
 
     job = db.claim_next_job(conn)
@@ -56,8 +51,13 @@ def process_one(conn, cfg: dict) -> bool:
         return False
     try:
         if job.kind == "chat":
-            reply = handle_chat_job(conn, job, cfg)
-            db.complete_job(conn, job.id, {"reply_chars": len(reply)})
+            # Reply-insert (inside handle_chat_job) and job-completion must be
+            # atomic: if complete_job throws after the reply is written, the
+            # rollback here undoes the reply too, so a requeue-and-retry never
+            # produces a duplicate chef reply.
+            with conn.transaction():
+                reply = handle_chat_job(conn, job, cfg)
+                db.complete_job(conn, job.id, {"reply_chars": len(reply)})
         else:
             raise ValueError(f"unknown job kind: {job.kind}")
     except Exception as exc:  # noqa: BLE001 — worker must never die on one job
