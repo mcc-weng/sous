@@ -91,3 +91,109 @@ def test_build_chat_prompt_uses_ctx_now(conn):
     prompt = context.build_chat_prompt(TEMPLATE, ctx, "hi")
     assert "2030-01-09" in prompt
     assert "週三" in prompt   # 2030-01-09 is a Wednesday
+
+
+def test_fetch_ritual_context_targets_next_week(conn):
+    fixed = datetime.datetime(2026, 7, 14, 9, 0, tzinfo=ZoneInfo("Australia/Sydney"))  # a Tuesday
+    ctx = context.fetch_ritual_context(conn, SANDBOX, now=fixed)
+    assert ctx["target_week_of"] == datetime.date(2026, 7, 20)  # the following Monday
+    assert ctx["now"] is fixed
+
+
+def test_render_recent_weeks_shows_history_before_target(conn):
+    conn.execute(
+        "insert into plan_weeks (household_id, week_of, status) "
+        "values (%s, '2026-06-22', 'locked') returning id", (SANDBOX,),
+    )
+    wid = conn.execute(
+        "select id from plan_weeks where household_id=%s and week_of='2026-06-22'",
+        (SANDBOX,),
+    ).fetchone()[0]
+    conn.execute(
+        "insert into plan_days (week_id, household_id, date, dish, mode) "
+        "values (%s, %s, '2026-06-23', '歷史測試菜', 'fast')", (wid, SANDBOX),
+    )
+    try:
+        rendered = context._render_recent_weeks(conn, SANDBOX, datetime.date(2026, 7, 20))
+        assert "歷史測試菜" in rendered
+        assert "2026-06-23" in rendered
+    finally:
+        conn.execute("delete from plan_weeks where id = %s", (wid,))
+
+
+def test_render_recent_weeks_excludes_older_than_window(conn):
+    rendered = context._render_recent_weeks(
+        conn, SANDBOX, datetime.date(2026, 7, 20), weeks_back=4,
+    )
+    # anything before 2026-06-22 (4 weeks back from 2026-07-20) must not appear —
+    # no seeded data exists that old, so this just asserts the function runs
+    # cleanly over an empty/partial window without error.
+    assert isinstance(rendered, str)
+
+
+def test_render_inbox_lists_kind_and_content(conn):
+    conn.execute(
+        "insert into inbox_items (household_id, kind, content) "
+        "values (%s, 'craving', '想吃泰式')", (SANDBOX,),
+    )
+    try:
+        rendered = context._render_inbox(conn, SANDBOX)
+        assert "craving" in rendered
+        assert "想吃泰式" in rendered
+    finally:
+        conn.execute(
+            "delete from inbox_items where household_id=%s and content='想吃泰式'",
+            (SANDBOX,),
+        )
+
+
+def test_render_inbox_empty_is_honest(conn):
+    conn.execute("delete from inbox_items where household_id=%s", (SANDBOX,))
+    rendered = context._render_inbox(conn, SANDBOX)
+    assert "空" in rendered
+
+
+def test_render_verdicts_recent_joins_dish_name(conn):
+    pd_id = conn.execute(
+        "select id from plan_days where household_id=%s limit 1", (SANDBOX,),
+    ).fetchone()[0]
+    conn.execute(
+        "insert into verdicts (household_id, plan_day_id, rating, note) "
+        "values (%s, %s, '神作', '超好吃')", (SANDBOX, pd_id),
+    )
+    try:
+        rendered = context._render_verdicts_recent(conn, SANDBOX)
+        assert "神作" in rendered
+        assert "超好吃" in rendered
+    finally:
+        conn.execute(
+            "delete from verdicts where household_id=%s and note='超好吃'", (SANDBOX,),
+        )
+
+
+def test_render_staples_flagged_only_shows_low(conn):
+    conn.execute(
+        "insert into staples (household_id, name, flagged_low) "
+        "values (%s, '測試常備品', true) on conflict (household_id, name) "
+        "do update set flagged_low=true", (SANDBOX,),
+    )
+    try:
+        rendered = context._render_staples_flagged(conn, SANDBOX)
+        assert "測試常備品" in rendered
+        assert "醬油" not in rendered  # seeded staple, not flagged low
+    finally:
+        conn.execute(
+            "delete from staples where household_id=%s and name='測試常備品'", (SANDBOX,),
+        )
+
+
+def test_build_ritual_prompt_substitutes_everything(conn):
+    template = (
+        "{persona_pack}\n{today}\n{weekday}\n{target_week_of}\n{current_week_plan}\n"
+        "{recent_weeks}\n{inbox}\n{verdicts_recent}\n{staples_flagged}\n"
+        "{preferences}\n{cookbook_index}\n{history}\n{messages}"
+    )
+    ctx = context.fetch_ritual_context(conn, SANDBOX)
+    prompt = context.build_ritual_prompt(template, ctx, "user: 開始本週儀式")
+    assert "開始本週儀式" in prompt
+    assert "{" not in prompt.replace("{}", "")

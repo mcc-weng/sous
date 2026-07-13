@@ -74,6 +74,98 @@ def _render_history(conn, household_id: str, limit: int) -> str:
     return "\n".join(f"{s}: {c}" for s, c in reversed(rows)) or "(none)"
 
 
+def _render_recent_weeks(conn, household_id: str, before: datetime.date,
+                         weeks_back: int = 4) -> str:
+    since = before - datetime.timedelta(weeks=weeks_back)
+    rows = conn.execute(
+        "select date, dish, mode, status from plan_days "
+        "where household_id = %s and date >= %s and date < %s order by date",
+        (household_id, since, before),
+    ).fetchall()
+    if not rows:
+        return "(近期沒有排菜紀錄)"
+    lines = []
+    for date, dish, mode, status in rows:
+        parts = [date.isoformat(), dish, mode]
+        if status != "planned":
+            parts.append(status)
+        lines.append(" · ".join(parts))
+    return "\n".join(lines)
+
+
+def _render_inbox(conn, household_id: str) -> str:
+    rows = conn.execute(
+        "select kind, content from inbox_items where household_id = %s "
+        "order by created_at", (household_id,),
+    ).fetchall()
+    return "\n".join(f"[{k}] {c}" for k, c in rows) or "(收件匣是空的)"
+
+
+def _render_verdicts_recent(conn, household_id: str, limit: int = 15) -> str:
+    rows = conn.execute(
+        "select pd.date, pd.dish, v.rating, v.note from verdicts v "
+        "join plan_days pd on pd.id = v.plan_day_id "
+        "where v.household_id = %s order by v.created_at desc limit %s",
+        (household_id, limit),
+    ).fetchall()
+    lines = []
+    for date, dish, rating, note in rows:
+        line = f"{date.isoformat()} · {dish} · {rating}"
+        if note:
+            line += f"({note})"
+        lines.append(line)
+    return "\n".join(lines) or "(還沒有評價紀錄)"
+
+
+def _render_staples_flagged(conn, household_id: str) -> str:
+    rows = conn.execute(
+        "select name from staples where household_id = %s and flagged_low = true "
+        "order by name", (household_id,),
+    ).fetchall()
+    return "\n".join(f"- {n}" for (n,) in rows) or "(沒有常備品快用完)"
+
+
+def fetch_ritual_context(conn, household_id: str, history_limit: int = 20,
+                         now: datetime.datetime | None = None) -> dict:
+    household = db.get_household(conn, household_id)
+    if now is None:
+        now = datetime.datetime.now(ZoneInfo(household["timezone"]))
+    target_week_of = week_monday(now.date()) + datetime.timedelta(weeks=1)
+    return {
+        "household": household,
+        "now": now,
+        "target_week_of": target_week_of,
+        "current_week_plan": _render_week(conn, household_id, week_monday(now.date())),
+        "recent_weeks": _render_recent_weeks(conn, household_id, target_week_of),
+        "inbox": _render_inbox(conn, household_id),
+        "verdicts_recent": _render_verdicts_recent(conn, household_id),
+        "staples_flagged": _render_staples_flagged(conn, household_id),
+        "preferences": _render_preferences(conn, household_id),
+        "cookbook_index": _render_cookbook_index(conn, household_id),
+        "history": _render_history(conn, household_id, history_limit),
+    }
+
+
+def build_ritual_prompt(template: str, ctx: dict, new_messages: str) -> str:
+    now = ctx["now"]
+    return (
+        template
+        .replace("{persona_pack}", ctx["household"]["prompt_pack"])
+        .replace("{today}", now.strftime("%Y-%m-%d"))
+        .replace("{weekday}", _WEEKDAYS_ZH[now.weekday()])
+        .replace("{target_week_of}", ctx["target_week_of"].isoformat())
+        .replace("{current_week_plan}", ctx["current_week_plan"])
+        .replace("{recent_weeks}", ctx["recent_weeks"])
+        .replace("{inbox}", ctx["inbox"])
+        .replace("{verdicts_recent}", ctx["verdicts_recent"])
+        .replace("{staples_flagged}", ctx["staples_flagged"])
+        .replace("{preferences}", ctx["preferences"])
+        .replace("{cookbook_index}", ctx["cookbook_index"])
+        .replace("{history}", ctx["history"])
+        .replace("{messages}", new_messages)
+    )
+
+
 def fetch_context(conn, household_id: str, history_limit: int = 20,
                   now: datetime.datetime | None = None) -> dict:
     household = db.get_household(conn, household_id)
