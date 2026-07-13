@@ -112,3 +112,33 @@ def get_household(conn, household_id: str) -> dict:
     ).fetchone()
     return {"name": row[0], "timezone": row[1],
             "prompt_pack": row[2], "copy_pack": row[3]}
+
+
+def ensure_proposing_week(conn, household_id: str, week_of) -> str:
+    """Idempotent create-if-absent. Never touches a row that already exists —
+    in particular never downgrades an already-'locked' week back to
+    'proposing', so re-triggering a ritual for an already-planned week is
+    safe (the brain sees the existing plan via current/recent-weeks context
+    and can decide to re-propose honestly rather than silently reopening it)."""
+    row = conn.execute(
+        "select id::text from plan_weeks where household_id = %s and week_of = %s",
+        (household_id, week_of),
+    ).fetchone()
+    if row:
+        return row[0]
+    row = conn.execute(
+        "insert into plan_weeks (household_id, week_of, status) "
+        "values (%s, %s, 'proposing') returning id::text",
+        (household_id, week_of),
+    ).fetchone()
+    return row[0]
+
+
+def get_proposing_week(conn, household_id: str) -> dict | None:
+    row = conn.execute(
+        "select id::text, week_of from plan_weeks "
+        "where household_id = %s and status = 'proposing' "
+        "order by week_of desc limit 1",
+        (household_id,),
+    ).fetchone()
+    return {"id": row[0], "week_of": row[1]} if row else None

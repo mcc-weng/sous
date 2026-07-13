@@ -1,3 +1,5 @@
+import datetime
+
 import psycopg
 from sous_worker import db
 from tests.conftest import SANDBOX, TEST_DB_URL
@@ -80,3 +82,65 @@ def test_insert_chef_message_and_get_household(conn):
     assert hh["name"] == "sandbox"
     assert "小當家" in hh["prompt_pack"]
     assert "failure_message" in hh["copy_pack"]
+
+
+def test_ensure_proposing_week_creates_when_absent(conn):
+    target = datetime.date(2026, 8, 3)  # a Monday, far from any seeded week
+    week_id = db.ensure_proposing_week(conn, SANDBOX, target)
+    row = conn.execute(
+        "select status, week_of from plan_weeks where id = %s", (week_id,),
+    ).fetchone()
+    try:
+        assert row == ("proposing", target)
+    finally:
+        conn.execute("delete from plan_weeks where id = %s", (week_id,))
+
+
+def test_ensure_proposing_week_is_idempotent(conn):
+    target = datetime.date(2026, 8, 10)
+    first = db.ensure_proposing_week(conn, SANDBOX, target)
+    second = db.ensure_proposing_week(conn, SANDBOX, target)
+    try:
+        assert first == second
+        count = conn.execute(
+            "select count(*) from plan_weeks where household_id=%s and week_of=%s",
+            (SANDBOX, target),
+        ).fetchone()[0]
+        assert count == 1
+    finally:
+        conn.execute("delete from plan_weeks where id = %s", (first,))
+
+
+def test_ensure_proposing_week_never_downgrades_locked(conn):
+    target = datetime.date(2026, 8, 17)
+    week_id = conn.execute(
+        "insert into plan_weeks (household_id, week_of, status) "
+        "values (%s, %s, 'locked') returning id::text", (SANDBOX, target),
+    ).fetchone()[0]
+    try:
+        returned_id = db.ensure_proposing_week(conn, SANDBOX, target)
+        status = conn.execute(
+            "select status from plan_weeks where id = %s", (week_id,),
+        ).fetchone()[0]
+        assert returned_id == week_id
+        assert status == "locked"
+    finally:
+        conn.execute("delete from plan_weeks where id = %s", (week_id,))
+
+
+def test_get_proposing_week_returns_none_when_absent(conn):
+    conn.execute(
+        "delete from plan_weeks where household_id=%s and status='proposing'",
+        (SANDBOX,),
+    )
+    assert db.get_proposing_week(conn, SANDBOX) is None
+
+
+def test_get_proposing_week_returns_the_row(conn):
+    target = datetime.date(2026, 8, 24)
+    week_id = db.ensure_proposing_week(conn, SANDBOX, target)
+    try:
+        found = db.get_proposing_week(conn, SANDBOX)
+        assert found == {"id": week_id, "week_of": target}
+    finally:
+        conn.execute("delete from plan_weeks where id = %s", (week_id,))
