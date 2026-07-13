@@ -1,9 +1,10 @@
-from sous_worker import main
+from sous_worker import db, main
 from tests.conftest import SANDBOX
 
 
 def _cfg():
     return {"chat_model": "sonnet", "chat_timeout_sec": 480,
+            "chat_allowed_tools": ["Read", "Bash(.venv/bin/python state_api.py:*)"],
             "poll_interval_sec": 0, "heartbeat_interval_sec": 15,
             "stale_after_sec": 600, "max_attempts": 2, "history_limit": 20}
 
@@ -12,7 +13,7 @@ def test_process_one_happy_path(conn, chat_job, monkeypatch):
     mid, jid = chat_job
     captured = {}
 
-    def fake_brain(prompt, model, timeout, allowed_tools="Read"):
+    def fake_brain(prompt, **kw):
         captured["prompt"] = prompt
         return "今晚是蔥香雞腿飯!"
 
@@ -53,7 +54,7 @@ def test_process_one_requeues_then_fails_with_apology(conn, chat_job, monkeypatc
 def test_process_one_rolls_back_reply_if_complete_fails(conn, chat_job, monkeypatch):
     _, jid = chat_job
 
-    def fake_brain(prompt, model, timeout, allowed_tools="Read"):
+    def fake_brain(prompt, **kw):
         return "今晚是蔥香雞腿飯!"
 
     def broken_complete(*a, **kw):
@@ -79,6 +80,22 @@ def test_process_one_rolls_back_reply_if_complete_fails(conn, chat_job, monkeypa
 
 def test_process_one_idle_returns_false(conn):
     assert main.process_one(conn, _cfg()) is False
+
+
+def test_generate_chat_reply_wires_tools_env_cwd(conn, chat_job, monkeypatch):
+    seen = {}
+
+    def fake_brain(prompt, **kw):
+        seen.update(kw)
+        return "ok"
+
+    monkeypatch.setattr(main.brain, "run_brain", fake_brain)
+    job = db.claim_next_job(conn)
+    cfg = main.load_config()
+    main.generate_chat_reply(conn, job, cfg)
+    assert seen["extra_env"] == {"SOUS_HOUSEHOLD_ID": SANDBOX}
+    assert seen["cwd"] == str(main.ROOT)
+    assert "Bash(.venv/bin/python state_api.py:*)" in seen["allowed_tools"]
 
 
 def test_unknown_job_kind_fails_cleanly(conn):

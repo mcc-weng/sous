@@ -36,3 +36,17 @@ def test_run_brain_nonzero_exit_raises(tmp_path, monkeypatch):
     monkeypatch.setenv("CLAUDE_BIN", str(script))
     with pytest.raises(RuntimeError, match="exited 3"):
         brain.run_brain("hi")
+
+
+def test_run_brain_passes_tools_env_and_cwd(tmp_path, monkeypatch):
+    script = tmp_path / "claude"
+    script.write_text('#!/bin/sh\necho "ARGS=$* HID=$SOUS_HOUSEHOLD_ID PWD=$(pwd -P)"\n')
+    script.chmod(0o755)
+    monkeypatch.setenv("CLAUDE_BIN", str(script))
+    out = brain.run_brain(
+        "hi", allowed_tools=["Read", "Bash(.venv/bin/python state_api.py:*)"],
+        cwd=str(tmp_path), extra_env={"SOUS_HOUSEHOLD_ID": "h-1"},
+    )
+    assert "Bash(.venv/bin/python state_api.py:*)" in out
+    assert "HID=h-1" in out
+    assert f"PWD={tmp_path.resolve()}" in out

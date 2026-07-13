@@ -1,6 +1,7 @@
 {
   "chat_model": "sonnet",
   "chat_timeout_sec": 480,
+  "chat_allowed_tools": ["Read", "Bash(.venv/bin/python state_api.py:*)"],
   "poll_interval_sec": 3,
   "heartbeat_interval_sec": 15,
   "stale_after_sec": 600,

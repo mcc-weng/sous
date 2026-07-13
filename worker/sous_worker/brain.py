@@ -1,11 +1,12 @@
 """Wraps headless `claude -p` (Claude subscription, no API key).
 
 Prompt is piped via STDIN — `--allowedTools` is variadic and would swallow a
-trailing prompt argument (alfred spike, 2026-06-07). M1 brain is read-only:
-allowed_tools defaults to "Read" only; state_api verbs arrive in M2.
+trailing prompt argument (alfred spike, 2026-06-07). Write verbs arrive via
+the state_api Bash allowlist entry in `allowed_tools`, not a hardcoded tool.
 """
 import os
 import subprocess
+from collections.abc import Sequence
 
 _CLAUDE_DEFAULT = "/Users/mikeweng/.local/bin/claude"
 
@@ -15,13 +16,17 @@ def _claude_bin() -> str:
 
 
 def run_brain(prompt: str, model: str = "sonnet", timeout: int = 480,
-              allowed_tools: str = "Read") -> str:
+              allowed_tools: Sequence[str] = ("Read",), cwd: str | None = None,
+              extra_env: dict | None = None) -> str:
+    env = None if extra_env is None else {**os.environ, **extra_env}
     try:
         result = subprocess.run(
-            [_claude_bin(), "-p", "--model", model, "--allowedTools", allowed_tools],
+            [_claude_bin(), "-p", "--model", model, "--allowedTools", *allowed_tools],
             input=prompt.encode(),
             capture_output=True,
             timeout=timeout,
+            cwd=cwd,
+            env=env,
         )
     except subprocess.TimeoutExpired:
         raise RuntimeError(f"brain timed out after {timeout}s") from None

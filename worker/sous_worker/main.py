@@ -27,7 +27,8 @@ def _apologize(conn, household_id: str, job_id: str) -> None:
 
 
 def generate_chat_reply(conn, job: db.Job, cfg: dict) -> str:
-    """Fetch context and run the brain — reads only, no writes.
+    """Fetch context and run the brain — the worker's own connection does no
+    writes here; the brain now writes through state_api subprocesses.
 
     Deliberately kept outside any DB transaction: brain.run_brain() shells out
     to `claude -p` and can block up to cfg["chat_timeout_sec"] (480s) for a
@@ -46,7 +47,10 @@ def generate_chat_reply(conn, job: db.Job, cfg: dict) -> str:
             new_message = f"user: {content}"
     prompt = context.build_chat_prompt(template, ctx, new_message or "(none)")
     return brain.run_brain(prompt, model=cfg["chat_model"],
-                           timeout=cfg["chat_timeout_sec"])
+                           timeout=cfg["chat_timeout_sec"],
+                           allowed_tools=cfg["chat_allowed_tools"],
+                           cwd=str(ROOT),
+                           extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
 
 
 def process_one(conn, cfg: dict) -> bool:
