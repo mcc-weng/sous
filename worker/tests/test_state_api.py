@@ -141,3 +141,31 @@ def test_cli_argparse_errors_emit_json(api_hid):
     assert bad_verb.stderr == ""
     out = json.loads(bad_verb.stdout)
     assert out["ok"] is False and "nonexistent-verb" in out["error"]
+
+
+def test_swap_days_swaps_dish_payload_not_status(conn, api_hid):
+    conn.execute(
+        "update plan_days set status='cooked' where household_id=%s and date=%s",
+        (api_hid, MONDAY),
+    )
+    out = state_api.swap_days(conn, api_hid, MONDAY, TUESDAY)
+    assert out["ok"] is True
+    rows = conn.execute(
+        "select date, dish, mode, prep_note, status from plan_days "
+        "where household_id = %s order by date", (api_hid,),
+    ).fetchall()
+    assert rows[0] == (MONDAY, "三杯雞", "fast", None, "cooked")
+    assert rows[1] == (TUESDAY, "咖哩飯", "batch", "前一晚醃肉", "planned")
+
+
+def test_swap_days_requires_both_days(conn, api_hid):
+    with pytest.raises(ValueError, match="both"):
+        state_api.swap_days(conn, api_hid, MONDAY,
+                            MONDAY + datetime.timedelta(days=30))
+
+
+def test_cli_swap_days(api_hid):
+    proc = _run_cli(["swap-days", "--date-a", str(MONDAY), "--date-b", str(TUESDAY)],
+                    api_hid)
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout)["ok"] is True

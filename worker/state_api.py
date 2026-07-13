@@ -78,6 +78,27 @@ def update_day(conn, household_id: str, date: datetime.date, dish=None, mode=Non
     return {"ok": True, "date": row[0], "dish": row[1], "mode": row[2], "status": row[3]}
 
 
+def swap_days(conn, household_id: str, date_a: datetime.date,
+              date_b: datetime.date) -> dict:
+    n = conn.execute(
+        "select count(*) from plan_days where household_id = %s and date = any(%s)",
+        (household_id, [date_a, date_b]),
+    ).fetchone()[0]
+    if n != 2:
+        raise ValueError(f"both days must exist on the plan ({date_a}, {date_b})")
+    # UPDATE ... FROM reads the pre-statement snapshot, so one statement swaps
+    # both rows without a temp value. status stays with the calendar slot.
+    conn.execute(
+        "update plan_days t set dish=o.dish, recipe_id=o.recipe_id, mode=o.mode, "
+        "prep_note=o.prep_note, nutrition=o.nutrition, reasoning=o.reasoning "
+        "from plan_days o "
+        "where t.household_id = %s and o.household_id = %s "
+        "and t.date in (%s, %s) and o.date in (%s, %s) and t.date <> o.date",
+        (household_id, household_id, date_a, date_b, date_a, date_b),
+    )
+    return {"ok": True, "swapped": [date_a, date_b]}
+
+
 class _JSONErrorParser(argparse.ArgumentParser):
     """Route argparse-level failures (bad flags, unknown verb) through the
     same {"ok": false, "error": ...} + exit 1 contract as every other
@@ -100,6 +121,11 @@ def _parser() -> argparse.ArgumentParser:
     d.add_argument("--prep-note", dest="prep_note")
     d.add_argument("--status")
     d.add_argument("--reasoning")
+    s = sub.add_parser("swap-days")
+    s.add_argument("--date-a", dest="date_a", required=True,
+                   type=datetime.date.fromisoformat)
+    s.add_argument("--date-b", dest="date_b", required=True,
+                   type=datetime.date.fromisoformat)
     return p
 
 
@@ -110,6 +136,8 @@ def _dispatch(conn, household_id: str, args) -> dict:
         return update_day(conn, household_id, args.date, dish=args.dish,
                           mode=args.mode, prep_note=args.prep_note,
                           status=args.status, reasoning=args.reasoning)
+    if args.verb == "swap-days":
+        return swap_days(conn, household_id, args.date_a, args.date_b)
     raise ValueError(f"unknown verb {args.verb}")
 
 
