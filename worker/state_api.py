@@ -109,24 +109,20 @@ def _current_week_id(conn, household_id: str):
 
 def add_shopping_item(conn, household_id: str, name: str,
                       qty=None, section=None) -> dict:
-    existing = conn.execute(
-        "select id from shopping_items where household_id = %s "
-        "and checked = false and lower(name) = lower(%s)",
-        (household_id, name),
-    ).fetchone()
-    if existing:
-        conn.execute(
-            "update shopping_items set qty = coalesce(%s, qty), "
-            "section = coalesce(%s, section) where id = %s",
-            (qty, section, existing[0]),
-        )
-        return {"ok": True, "name": name, "deduped": True}
-    conn.execute(
+    # Atomic upsert against the partial unique index on (household_id,
+    # lower(name)) where checked = false (migration 0003) — a plain
+    # check-then-act select+insert/update would race under concurrent brain
+    # tool calls in the same session turn and could double-insert.
+    row = conn.execute(
         "insert into shopping_items (household_id, week_id, name, qty, section) "
-        "values (%s, %s, %s, %s, %s)",
+        "values (%s, %s, %s, %s, %s) "
+        "on conflict (household_id, lower(name)) where checked = false "
+        "do update set qty = coalesce(excluded.qty, shopping_items.qty), "
+        "section = coalesce(excluded.section, shopping_items.section) "
+        "returning (xmax = 0) as inserted",
         (household_id, _current_week_id(conn, household_id), name, qty, section),
-    )
-    return {"ok": True, "name": name, "deduped": False}
+    ).fetchone()
+    return {"ok": True, "name": name, "deduped": not row[0]}
 
 
 def remove_shopping_item(conn, household_id: str, name: str) -> dict:
