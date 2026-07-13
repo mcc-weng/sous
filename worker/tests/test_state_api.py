@@ -124,3 +124,20 @@ def test_cli_update_day_and_error_paths(api_hid):
     )
     assert no_hid.returncode == 1
     assert "SOUS_HOUSEHOLD_ID" in json.loads(no_hid.stdout)["error"]
+
+
+def test_cli_argparse_errors_emit_json(api_hid):
+    """Argparse-level failures (bad flag value, unknown verb) must funnel
+    through the same JSON-on-stdout + exit-1 contract as every other
+    failure — not argparse's default usage-text-on-stderr + exit 2."""
+    bad_date = _run_cli(["update-day", "--date", "bogus", "--dish", "x"], api_hid)
+    assert bad_date.returncode == 1
+    assert bad_date.stderr == ""
+    out = json.loads(bad_date.stdout)
+    assert out["ok"] is False and "date" in out["error"]
+
+    bad_verb = _run_cli(["nonexistent-verb"], api_hid)
+    assert bad_verb.returncode == 1
+    assert bad_verb.stderr == ""
+    out = json.loads(bad_verb.stdout)
+    assert out["ok"] is False and "nonexistent-verb" in out["error"]

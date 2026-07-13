@@ -23,11 +23,11 @@ import pathlib
 import sys
 from zoneinfo import ZoneInfo
 
-import psycopg
 from dotenv import load_dotenv
 
 # Invoked with cwd = worker/, so the script dir is on sys.path.
 from sous_worker.context import week_monday
+from sous_worker.db import connect
 
 MODES = {"batch", "fast", "leftover", "play"}
 STATUSES = {"planned", "cooked", "skipped"}
@@ -78,8 +78,19 @@ def update_day(conn, household_id: str, date: datetime.date, dish=None, mode=Non
     return {"ok": True, "date": row[0], "dish": row[1], "mode": row[2], "status": row[3]}
 
 
+class _JSONErrorParser(argparse.ArgumentParser):
+    """Route argparse-level failures (bad flags, unknown verb) through the
+    same {"ok": false, "error": ...} + exit 1 contract as every other
+    failure, instead of argparse's default usage-text-to-stderr + exit 2.
+    Subparsers inherit this class too (argparse's add_subparsers defaults
+    parser_class to type(self))."""
+
+    def error(self, message):
+        raise ValueError(message)
+
+
 def _parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="state_api")
+    p = _JSONErrorParser(prog="state_api")
     sub = p.add_subparsers(dest="verb", required=True)
     sub.add_parser("get-plan")
     d = sub.add_parser("update-day")
@@ -104,12 +115,12 @@ def _dispatch(conn, household_id: str, args) -> dict:
 
 def main(argv=None) -> int:
     load_dotenv(pathlib.Path(__file__).resolve().parent / ".env")  # no-override
-    args = _parser().parse_args(argv)
     try:
+        args = _parser().parse_args(argv)
         household_id = os.environ.get("SOUS_HOUSEHOLD_ID")
         if not household_id:
             raise RuntimeError("SOUS_HOUSEHOLD_ID not set")
-        with psycopg.connect(os.environ["SOUS_DB_URL"], autocommit=True) as conn:
+        with connect() as conn:
             result = _dispatch(conn, household_id, args)
     except Exception as exc:  # noqa: BLE001 — errors go back to the model as JSON
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
