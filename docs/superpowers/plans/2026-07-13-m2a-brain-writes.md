@@ -1203,6 +1203,22 @@ Append a `## M2a exit verification` section to this plan file with pass/fail not
 
 ---
 
+## M2a exit verification (2026-07-13/14, real use against cloud sandbox household)
+
+Cloud deploy: migration `0003_shopping_items_dedupe_index.sql` pushed via `supabase db push`; stale week (anchored 2026-07-06, carrying the M1 live-workaround row) deleted and re-seeded anchored to the current household-local Monday (2026-07-13), preserving all `chat_messages` history (10 → still intact) and recipes/staples/preferences untouched. Worker restarted against cloud with the new `chat_allowed_tools` config; heartbeat confirmed fresh.
+
+All 5 real-use checks run from Mike's phone, verified against live DB state after each:
+
+1. **「今晚不想吃青醬雞胸義大利麵,換成三杯雞」** → PASS. Chef confirmed in-persona ("好!今晚換三杯雞了 🔥…"), `plan_days` row for today (2026-07-14) changed to 三杯雞, job `done`. **Tonight card updated live on-device without reopening the app** (confirmed by Mike) — proves Task 7's realtime subscription works end-to-end on a real device, not just in the simulator.
+2. **「醬油快沒了」** → PASS with a live-discovered gap. Chef confirmed in-persona, but `flag-staple` was called with the English name `"soy sauce"` rather than matching the existing seeded Chinese-named staple `醬油` — created a second `staples` row instead of flagging the existing one. Not a security/data-loss issue (the flag did land, just on a duplicate row), but a real quality gap distinct from the already-known case-sensitivity Minor finding: this is a *language* mismatch (醬油 vs "soy sauce"), which a case-fold fix alone would not catch. **Tracked for follow-up, not fixed in M2a** — needs either a staple name-canonicalization strategy or prompt guidance to reuse existing staple names verbatim when they match semantically. Candidate for M2b or a small standalone fix.
+3. **「幫我把 fish sauce 加進採買清單」** → PASS. `shopping_items` row `fish sauce / 1 bottle / pantry` appeared, correct English name, unchecked.
+4. **「本週菜單是什麼?」** → PASS. Reply correctly named 週二 07/14 · 三杯雞 · fast as today's dish — i.e. the Task 1 timezone fix holds under real live-clock conditions after a real week transition (today, 2026-07-14, is a Tuesday; the fix correctly resolves the household-local Monday-anchored week and picks up the write from check 1).
+5. **「存一道新食譜」** → PASS. Honest refusal ("可惡…新食譜收藏這招我還沒練成!…存新食譜要等之後的版本才學得會"), correctly named only the 3 seeded recipes as what it *can* discuss, offered to capture the ask in inbox instead. No new `recipes` row created, no fake success.
+
+All 5 chat jobs completed (`status='done'`, `attempts=1`, no retries/failures needed).
+
+**M2a exit test: PASSED** (4/5 clean, 1/5 pass-with-a-tracked-finding). The core claim — "one real week planned, shopped, and edited entirely through chat, with live-updating UI" — is proven for the write-path scope M2a covers (day edits, staple flagging, shopping list, honest refusal of out-of-scope asks). Ritual/shopping-sheet/cook-mode/recipe-save remain M2b/M2c scope as planned.
+
 ## Explicitly deferred to M2b / M2c (do not build here)
 
 - `set-plan` verb, ritual mode/prompt, plan_weeks draft→locked flow → **M2b** (ritual + week/shopping sheets, including iOS drag-to-swap which reuses `swap-days`).
