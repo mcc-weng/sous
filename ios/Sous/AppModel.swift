@@ -108,7 +108,15 @@ final class AppModel: ObservableObject {
             let inserts = channel.postgresChange(
                 InsertAction.self, schema: "public", table: "chat_messages"
             )
+            let planChanges = channel.postgresChange(
+                AnyAction.self, schema: "public", table: "plan_days"
+            )
             await channel.subscribe()
+            Task {
+                for await _ in planChanges {
+                    await loadTonight()
+                }
+            }
             for await _ in inserts {
                 await loadMessages()
             }
