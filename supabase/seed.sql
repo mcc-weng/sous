@@ -64,17 +64,17 @@ insert into recipes (id, household_id, slug, title, body_md, ingredients) values
 insert into plan_weeks (id, household_id, week_of, status, reasoning) values (
   '00000000-0000-0000-0000-000000000201',
   '00000000-0000-0000-0000-000000000001',
-  date_trunc('week', current_date)::date, 'locked', 'sandbox seed week'
+  date_trunc('week', (now() at time zone 'Australia/Sydney'))::date, 'locked', 'sandbox seed week'
 );
 
 insert into plan_days (week_id, household_id, date, dish, recipe_id, mode, prep_note) values
-('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', current_date)::date + 0, '蔥香雞腿飯',      '00000000-0000-0000-0000-000000000101', 'fast',     '雞腿前一晚退冰'),
-('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', current_date)::date + 1, '青醬雞胸義大利麵', '00000000-0000-0000-0000-000000000102', 'fast',     null),
-('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', current_date)::date + 2, '麻婆豆腐',        '00000000-0000-0000-0000-000000000103', 'batch',    '多煮一份週四吃'),
-('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', current_date)::date + 3, '麻婆豆腐(隔夜)', '00000000-0000-0000-0000-000000000103', 'leftover', null),
-('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', current_date)::date + 4, '蔥香雞腿飯',      '00000000-0000-0000-0000-000000000101', 'fast',     null),
-('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', current_date)::date + 5, '外食',            null,                                     'play',     null),
-('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', current_date)::date + 6, '青醬雞胸義大利麵', '00000000-0000-0000-0000-000000000102', 'fast',     null);
+('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', (now() at time zone 'Australia/Sydney'))::date + 0, '蔥香雞腿飯',      '00000000-0000-0000-0000-000000000101', 'fast',     '雞腿前一晚退冰'),
+('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', (now() at time zone 'Australia/Sydney'))::date + 1, '青醬雞胸義大利麵', '00000000-0000-0000-0000-000000000102', 'fast',     null),
+('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', (now() at time zone 'Australia/Sydney'))::date + 2, '麻婆豆腐',        '00000000-0000-0000-0000-000000000103', 'batch',    '多煮一份週四吃'),
+('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', (now() at time zone 'Australia/Sydney'))::date + 3, '麻婆豆腐(隔夜)', '00000000-0000-0000-0000-000000000103', 'leftover', null),
+('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', (now() at time zone 'Australia/Sydney'))::date + 4, '蔥香雞腿飯',      '00000000-0000-0000-0000-000000000101', 'fast',     null),
+('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', (now() at time zone 'Australia/Sydney'))::date + 5, '外食',            null,                                     'play',     null),
+('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000001', date_trunc('week', (now() at time zone 'Australia/Sydney'))::date + 6, '青醬雞胸義大利麵', '00000000-0000-0000-0000-000000000102', 'fast',     null);
 
 insert into shopping_items (household_id, week_id, name, qty, section) values
 ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000201','chicken thigh fillets','4','meat'),

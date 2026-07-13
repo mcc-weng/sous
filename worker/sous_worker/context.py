@@ -10,13 +10,20 @@ from sous_worker import db
 _WEEKDAYS_ZH = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"]
 
 
-def _render_week(conn, household_id: str) -> str:
+def week_monday(day: datetime.date) -> datetime.date:
+    """ISO-Monday anchor for plan_weeks.week_of. All week math goes through
+    here, driven by the household-local date — never the DB session's UTC
+    clock (M1 live bug: `current_date` is UTC; Sydney is UTC+10)."""
+    return day - datetime.timedelta(days=day.weekday())
+
+
+def _render_week(conn, household_id: str, monday: datetime.date) -> str:
     rows = conn.execute(
         "select d.date, d.dish, d.mode, d.prep_note, d.status "
         "from plan_days d join plan_weeks w on w.id = d.week_id "
-        "where d.household_id = %s and w.week_of = date_trunc('week', current_date)::date "
+        "where d.household_id = %s and w.week_of = %s "
         "order by d.date",
-        (household_id,),
+        (household_id, monday),
     ).fetchall()
     if not rows:
         return "(本週還沒有菜單)"
@@ -67,10 +74,15 @@ def _render_history(conn, household_id: str, limit: int) -> str:
     return "\n".join(f"{s}: {c}" for s, c in reversed(rows)) or "(none)"
 
 
-def fetch_context(conn, household_id: str, history_limit: int = 20) -> dict:
+def fetch_context(conn, household_id: str, history_limit: int = 20,
+                  now: datetime.datetime | None = None) -> dict:
+    household = db.get_household(conn, household_id)
+    if now is None:
+        now = datetime.datetime.now(ZoneInfo(household["timezone"]))
     return {
-        "household": db.get_household(conn, household_id),
-        "week_plan": _render_week(conn, household_id),
+        "household": household,
+        "now": now,
+        "week_plan": _render_week(conn, household_id, week_monday(now.date())),
         "preferences": _render_preferences(conn, household_id),
         "cookbook_index": _render_cookbook_index(conn, household_id),
         "shopping_open": _render_shopping_open(conn, household_id),
@@ -79,7 +91,7 @@ def fetch_context(conn, household_id: str, history_limit: int = 20) -> dict:
 
 
 def build_chat_prompt(template: str, ctx: dict, new_messages: str) -> str:
-    now = datetime.datetime.now(ZoneInfo(ctx["household"]["timezone"]))
+    now = ctx["now"]
     return (
         template
         .replace("{persona_pack}", ctx["household"]["prompt_pack"])
