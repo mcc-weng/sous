@@ -169,3 +169,65 @@ def test_cli_swap_days(api_hid):
                     api_hid)
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout)["ok"] is True
+
+
+def test_add_shopping_item_inserts_with_current_week(conn, api_hid):
+    out = state_api.add_shopping_item(conn, api_hid, "soy sauce",
+                                      qty="1 bottle", section="pantry")
+    assert out["ok"] is True and out["deduped"] is False
+    row = conn.execute(
+        "select name, qty, section, checked, week_id is not null "
+        "from shopping_items where household_id = %s", (api_hid,),
+    ).fetchone()
+    assert row == ("soy sauce", "1 bottle", "pantry", False, True)
+
+
+def test_add_shopping_item_dedupes_case_insensitively(conn, api_hid):
+    state_api.add_shopping_item(conn, api_hid, "soy sauce")
+    out = state_api.add_shopping_item(conn, api_hid, "Soy Sauce", qty="2 bottles")
+    assert out["deduped"] is True
+    rows = conn.execute(
+        "select qty from shopping_items where household_id = %s", (api_hid,),
+    ).fetchall()
+    assert rows == [("2 bottles",)]   # one row, qty refreshed
+
+
+def test_remove_shopping_item_is_idempotent(conn, api_hid):
+    state_api.add_shopping_item(conn, api_hid, "soy sauce")
+    assert state_api.remove_shopping_item(conn, api_hid, "SOY SAUCE")["removed"] == 1
+    assert state_api.remove_shopping_item(conn, api_hid, "soy sauce")["removed"] == 0
+
+
+def test_remove_leaves_checked_items_alone(conn, api_hid):
+    state_api.add_shopping_item(conn, api_hid, "soy sauce")
+    conn.execute(
+        "update shopping_items set checked=true where household_id=%s", (api_hid,),
+    )
+    assert state_api.remove_shopping_item(conn, api_hid, "soy sauce")["removed"] == 0
+
+
+def test_flag_staple_upserts(conn, api_hid):
+    first = state_api.flag_staple(conn, api_hid, "jasmine rice")
+    again = state_api.flag_staple(conn, api_hid, "jasmine rice")
+    assert first["ok"] and again["ok"]
+    rows = conn.execute(
+        "select name, flagged_low from staples where household_id = %s", (api_hid,),
+    ).fetchall()
+    assert rows == [("jasmine rice", True)]
+
+
+def test_capture_inbox_inserts(conn, api_hid):
+    out = state_api.capture_inbox(conn, api_hid, "craving", "想吃泰式")
+    assert out["ok"] is True
+    row = conn.execute(
+        "select kind, content from inbox_items where household_id = %s", (api_hid,),
+    ).fetchone()
+    assert row == ("craving", "想吃泰式")
+
+
+def test_cli_shopping_verbs(api_hid):
+    add = _run_cli(["add-shopping-item", "--name", "fish sauce",
+                    "--qty", "1", "--section", "pantry"], api_hid)
+    assert json.loads(add.stdout)["ok"] is True
+    rm = _run_cli(["remove-shopping-item", "--name", "fish sauce"], api_hid)
+    assert json.loads(rm.stdout)["removed"] == 1

@@ -99,6 +99,63 @@ def swap_days(conn, household_id: str, date_a: datetime.date,
     return {"ok": True, "swapped": [date_a, date_b]}
 
 
+def _current_week_id(conn, household_id: str):
+    row = conn.execute(
+        "select id from plan_weeks where household_id = %s and week_of = %s",
+        (household_id, week_monday(_household_today(conn, household_id))),
+    ).fetchone()
+    return row[0] if row else None
+
+
+def add_shopping_item(conn, household_id: str, name: str,
+                      qty=None, section=None) -> dict:
+    existing = conn.execute(
+        "select id from shopping_items where household_id = %s "
+        "and checked = false and lower(name) = lower(%s)",
+        (household_id, name),
+    ).fetchone()
+    if existing:
+        conn.execute(
+            "update shopping_items set qty = coalesce(%s, qty), "
+            "section = coalesce(%s, section) where id = %s",
+            (qty, section, existing[0]),
+        )
+        return {"ok": True, "name": name, "deduped": True}
+    conn.execute(
+        "insert into shopping_items (household_id, week_id, name, qty, section) "
+        "values (%s, %s, %s, %s, %s)",
+        (household_id, _current_week_id(conn, household_id), name, qty, section),
+    )
+    return {"ok": True, "name": name, "deduped": False}
+
+
+def remove_shopping_item(conn, household_id: str, name: str) -> dict:
+    removed = conn.execute(
+        "delete from shopping_items where household_id = %s "
+        "and checked = false and lower(name) = lower(%s) returning id",
+        (household_id, name),
+    ).fetchall()
+    return {"ok": True, "name": name, "removed": len(removed)}
+
+
+def flag_staple(conn, household_id: str, name: str) -> dict:
+    conn.execute(
+        "insert into staples (household_id, name, flagged_low) values (%s, %s, true) "
+        "on conflict (household_id, name) do update set flagged_low = true",
+        (household_id, name),
+    )
+    return {"ok": True, "name": name, "flagged_low": True}
+
+
+def capture_inbox(conn, household_id: str, kind: str, content: str) -> dict:
+    row = conn.execute(
+        "insert into inbox_items (household_id, kind, content) "
+        "values (%s, %s, %s) returning id::text",
+        (household_id, kind, content),
+    ).fetchone()
+    return {"ok": True, "id": row[0], "kind": kind}
+
+
 class _JSONErrorParser(argparse.ArgumentParser):
     """Route argparse-level failures (bad flags, unknown verb) through the
     same {"ok": false, "error": ...} + exit 1 contract as every other
@@ -126,6 +183,17 @@ def _parser() -> argparse.ArgumentParser:
                    type=datetime.date.fromisoformat)
     s.add_argument("--date-b", dest="date_b", required=True,
                    type=datetime.date.fromisoformat)
+    a = sub.add_parser("add-shopping-item")
+    a.add_argument("--name", required=True)
+    a.add_argument("--qty")
+    a.add_argument("--section")
+    r = sub.add_parser("remove-shopping-item")
+    r.add_argument("--name", required=True)
+    f = sub.add_parser("flag-staple")
+    f.add_argument("--name", required=True)
+    c = sub.add_parser("capture-inbox")
+    c.add_argument("--kind", required=True, choices=["craving", "feedback", "note"])
+    c.add_argument("--content", required=True)
     return p
 
 
@@ -138,6 +206,15 @@ def _dispatch(conn, household_id: str, args) -> dict:
                           status=args.status, reasoning=args.reasoning)
     if args.verb == "swap-days":
         return swap_days(conn, household_id, args.date_a, args.date_b)
+    if args.verb == "add-shopping-item":
+        return add_shopping_item(conn, household_id, args.name,
+                                 qty=args.qty, section=args.section)
+    if args.verb == "remove-shopping-item":
+        return remove_shopping_item(conn, household_id, args.name)
+    if args.verb == "flag-staple":
+        return flag_staple(conn, household_id, args.name)
+    if args.verb == "capture-inbox":
+        return capture_inbox(conn, household_id, args.kind, args.content)
     raise ValueError(f"unknown verb {args.verb}")
 
 
