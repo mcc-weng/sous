@@ -152,6 +152,71 @@ def capture_inbox(conn, household_id: str, kind: str, content: str) -> dict:
     return {"ok": True, "id": row[0], "kind": kind}
 
 
+def set_plan(conn, household_id: str, days: list, shopping_items: list,
+            reasoning: str | None = None) -> dict:
+    target = week_monday(_household_today(conn, household_id)) + datetime.timedelta(days=7)
+    week_row = conn.execute(
+        "select id from plan_weeks where household_id = %s and week_of = %s",
+        (household_id, target),
+    ).fetchone()
+    if week_row is None:
+        raise ValueError("no active ritual for next week — start the ritual first")
+    week_id = week_row[0]
+    if len(days) != 7:
+        raise ValueError("days must have exactly 7 entries")
+    seen_dates = set()
+    parsed = []
+    for d in days:
+        date = datetime.date.fromisoformat(d["date"])
+        if not (target <= date <= target + datetime.timedelta(days=6)):
+            raise ValueError(f"date {date} is outside the target week {target}")
+        if date in seen_dates:
+            raise ValueError(f"duplicate date {date}")
+        seen_dates.add(date)
+        mode = d.get("mode", "fast")
+        if mode not in MODES:
+            raise ValueError(f"mode must be one of {sorted(MODES)}")
+        parsed.append((date, d["dish"], mode, d.get("prep_note"), d.get("reasoning")))
+    for date, dish, mode, prep_note, day_reasoning in parsed:
+        conn.execute(
+            "insert into plan_days (week_id, household_id, date, dish, mode, "
+            "prep_note, reasoning) values (%s, %s, %s, %s, %s, %s, %s) "
+            "on conflict (household_id, date) do update set "
+            "week_id = excluded.week_id, dish = excluded.dish, mode = excluded.mode, "
+            "prep_note = excluded.prep_note, reasoning = excluded.reasoning",
+            (week_id, household_id, date, dish, mode, prep_note, day_reasoning),
+        )
+    conn.execute("delete from shopping_items where week_id = %s", (week_id,))
+    for item in shopping_items:
+        conn.execute(
+            "insert into shopping_items (household_id, week_id, name, qty, section) "
+            "values (%s, %s, %s, %s, %s)",
+            (household_id, week_id, item["name"], item.get("qty"), item.get("section")),
+        )
+    conn.execute(
+        "update plan_weeks set status = 'locked', reasoning = %s where id = %s",
+        (reasoning, week_id),
+    )
+    return {"ok": True, "week_of": target, "days": len(parsed),
+            "shopping_items": len(shopping_items)}
+
+
+def _ensure_proposing_week_for_test(conn, household_id: str, week_of) -> str:
+    """Test-only helper — production code creates this row via
+    sous_worker.db.ensure_proposing_week from main.py, not from here."""
+    row = conn.execute(
+        "select id::text from plan_weeks where household_id=%s and week_of=%s",
+        (household_id, week_of),
+    ).fetchone()
+    if row:
+        return row[0]
+    return conn.execute(
+        "insert into plan_weeks (household_id, week_of, status) "
+        "values (%s, %s, 'proposing') returning id::text",
+        (household_id, week_of),
+    ).fetchone()[0]
+
+
 class _JSONErrorParser(argparse.ArgumentParser):
     """Route argparse-level failures (bad flags, unknown verb) through the
     same {"ok": false, "error": ...} + exit 1 contract as every other
@@ -190,6 +255,12 @@ def _parser() -> argparse.ArgumentParser:
     c = sub.add_parser("capture-inbox")
     c.add_argument("--kind", required=True, choices=["craving", "feedback", "note"])
     c.add_argument("--content", required=True)
+    sp = sub.add_parser("set-plan")
+    sp.add_argument("--days", required=True,
+                    help='JSON array: [{"date","dish","mode"?,"prep_note"?,"reasoning"?}, ...] — exactly 7 entries')
+    sp.add_argument("--shopping-items", dest="shopping_items", default="[]",
+                    help='JSON array: [{"name","qty"?,"section"?}, ...]')
+    sp.add_argument("--reasoning")
     return p
 
 
@@ -211,6 +282,14 @@ def _dispatch(conn, household_id: str, args) -> dict:
         return flag_staple(conn, household_id, args.name)
     if args.verb == "capture-inbox":
         return capture_inbox(conn, household_id, args.kind, args.content)
+    if args.verb == "set-plan":
+        try:
+            days = json.loads(args.days)
+            shopping_items = json.loads(args.shopping_items)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"invalid JSON in --days or --shopping-items: {exc}") from None
+        return set_plan(conn, household_id, days, shopping_items,
+                        reasoning=args.reasoning)
     raise ValueError(f"unknown verb {args.verb}")
 
 

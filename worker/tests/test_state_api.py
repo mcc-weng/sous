@@ -231,3 +231,100 @@ def test_cli_shopping_verbs(api_hid):
     assert json.loads(add.stdout)["ok"] is True
     rm = _run_cli(["remove-shopping-item", "--name", "fish sauce"], api_hid)
     assert json.loads(rm.stdout)["removed"] == 1
+
+
+def _week_of(monday: datetime.date, offset: int) -> str:
+    return (monday + datetime.timedelta(days=offset)).isoformat()
+
+
+def _next_monday_for(household_today: datetime.date) -> datetime.date:
+    return week_monday(household_today) + datetime.timedelta(days=7)
+
+
+def test_set_plan_writes_full_week_and_locks(conn, api_hid):
+    target = _next_monday_for(datetime.date.today())
+    wid = state_api._ensure_proposing_week_for_test(conn, api_hid, target)
+    days = [
+        {"date": _week_of(target, i), "dish": f"測試菜{i}", "mode": "fast"}
+        for i in range(7)
+    ]
+    shopping = [{"name": "soy sauce", "qty": "1 bottle", "section": "pantry"}]
+    out = state_api.set_plan(conn, api_hid, days, shopping, reasoning="測試摘要")
+    assert out == {"ok": True, "week_of": target, "days": 7, "shopping_items": 1}
+    status, reasoning = conn.execute(
+        "select status, reasoning from plan_weeks where id = %s", (wid,),
+    ).fetchone()
+    assert status == "locked" and reasoning == "測試摘要"
+    written = conn.execute(
+        "select date, dish, mode from plan_days where week_id = %s order by date",
+        (wid,),
+    ).fetchall()
+    assert len(written) == 7
+    assert written[0] == (target, "測試菜0", "fast")
+    shopping_rows = conn.execute(
+        "select name, qty, section from shopping_items where week_id = %s", (wid,),
+    ).fetchall()
+    assert shopping_rows == [("soy sauce", "1 bottle", "pantry")]
+
+
+def test_set_plan_requires_exactly_seven_days(conn, api_hid):
+    target = _next_monday_for(datetime.date.today())
+    state_api._ensure_proposing_week_for_test(conn, api_hid, target)
+    days = [{"date": _week_of(target, 0), "dish": "測試菜"}]
+    with pytest.raises(ValueError, match="7"):
+        state_api.set_plan(conn, api_hid, days, [])
+
+
+def test_set_plan_rejects_date_outside_target_week(conn, api_hid):
+    target = _next_monday_for(datetime.date.today())
+    state_api._ensure_proposing_week_for_test(conn, api_hid, target)
+    days = [
+        {"date": _week_of(target, i), "dish": f"測試菜{i}"} for i in range(6)
+    ] + [{"date": _week_of(target, 30), "dish": "越界菜"}]
+    with pytest.raises(ValueError, match="outside"):
+        state_api.set_plan(conn, api_hid, days, [])
+
+
+def test_set_plan_rejects_no_active_ritual(conn, api_hid):
+    conn.execute(
+        "delete from plan_weeks where household_id=%s and status='proposing'",
+        (api_hid,),
+    )
+    target = _next_monday_for(datetime.date.today())
+    days = [{"date": _week_of(target, i), "dish": f"測試菜{i}"} for i in range(7)]
+    with pytest.raises(ValueError, match="no active ritual"):
+        state_api.set_plan(conn, api_hid, days, [])
+
+
+def test_set_plan_replaces_shopping_items_not_accumulates(conn, api_hid):
+    target = _next_monday_for(datetime.date.today())
+    wid = state_api._ensure_proposing_week_for_test(conn, api_hid, target)
+    days = [{"date": _week_of(target, i), "dish": f"測試菜{i}"} for i in range(7)]
+    state_api.set_plan(conn, api_hid, days, [{"name": "item-a"}])
+    # a second lock call (retry) must not leave item-a AND item-b both present
+    conn.execute(
+        "update plan_weeks set status='proposing' where id=%s", (wid,),
+    )  # simulate a retry re-entering lock with a revised shopping list
+    state_api.set_plan(conn, api_hid, days, [{"name": "item-b"}])
+    names = {n for (n,) in conn.execute(
+        "select name from shopping_items where week_id=%s", (wid,)
+    ).fetchall()}
+    assert names == {"item-b"}
+
+
+def test_cli_set_plan(api_hid):
+    target = _next_monday_for(datetime.date.today())
+    import psycopg
+    with psycopg.connect(TEST_DB_URL, autocommit=True) as c:
+        state_api._ensure_proposing_week_for_test(c, api_hid, target)
+    days_json = json.dumps([
+        {"date": _week_of(target, i), "dish": f"CLI測試菜{i}"} for i in range(7)
+    ])
+    proc = _run_cli(
+        ["set-plan", "--days", days_json, "--shopping-items", "[]",
+         "--reasoning", "CLI 測試"],
+        api_hid,
+    )
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["ok"] is True and out["days"] == 7
