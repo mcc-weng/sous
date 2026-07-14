@@ -328,3 +328,50 @@ def test_cli_set_plan(api_hid):
     assert proc.returncode == 0, proc.stderr
     out = json.loads(proc.stdout)
     assert out["ok"] is True and out["days"] == 7
+
+
+def test_clear_inbox_removes_all_for_household(conn, api_hid):
+    conn.execute(
+        "insert into inbox_items (household_id, kind, content) values "
+        "(%s, 'craving', '想吃泰式'), (%s, 'feedback', '上次太鹹')",
+        (api_hid, api_hid),
+    )
+    out = state_api.clear_inbox(conn, api_hid)
+    assert out == {"ok": True, "removed": 2}
+    remaining = conn.execute(
+        "select count(*) from inbox_items where household_id=%s", (api_hid,),
+    ).fetchone()[0]
+    assert remaining == 0
+
+
+def test_clear_inbox_is_idempotent(conn, api_hid):
+    first = state_api.clear_inbox(conn, api_hid)
+    second = state_api.clear_inbox(conn, api_hid)
+    assert second["removed"] == 0
+    assert first["ok"] is True and second["ok"] is True
+
+
+def test_clear_inbox_scopes_to_household(conn, api_hid):
+    from tests.conftest import SANDBOX
+    conn.execute(
+        "insert into inbox_items (household_id, kind, content) "
+        "values (%s, 'note', '不要清掉這個')", (SANDBOX,),
+    )
+    try:
+        state_api.clear_inbox(conn, api_hid)
+        row = conn.execute(
+            "select content from inbox_items where household_id=%s and content='不要清掉這個'",
+            (SANDBOX,),
+        ).fetchone()
+        assert row is not None
+    finally:
+        conn.execute(
+            "delete from inbox_items where household_id=%s and content='不要清掉這個'",
+            (SANDBOX,),
+        )
+
+
+def test_cli_clear_inbox(api_hid):
+    proc = _run_cli(["clear-inbox"], api_hid)
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout)["ok"] is True

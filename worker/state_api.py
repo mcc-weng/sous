@@ -201,6 +201,14 @@ def set_plan(conn, household_id: str, days: list, shopping_items: list,
             "shopping_items": len(shopping_items)}
 
 
+def clear_inbox(conn, household_id: str) -> dict:
+    removed = conn.execute(
+        "delete from inbox_items where household_id = %s returning id",
+        (household_id,),
+    ).fetchall()
+    return {"ok": True, "removed": len(removed)}
+
+
 def _ensure_proposing_week_for_test(conn, household_id: str, week_of) -> str:
     """Test-only helper — production code creates this row via
     sous_worker.db.ensure_proposing_week from main.py, not from here."""
@@ -261,6 +269,7 @@ def _parser() -> argparse.ArgumentParser:
     sp.add_argument("--shopping-items", dest="shopping_items", default="[]",
                     help='JSON array: [{"name","qty"?,"section"?}, ...]')
     sp.add_argument("--reasoning")
+    sub.add_parser("clear-inbox")
     return p
 
 
@@ -290,6 +299,8 @@ def _dispatch(conn, household_id: str, args) -> dict:
             raise ValueError(f"invalid JSON in --days or --shopping-items: {exc}") from None
         return set_plan(conn, household_id, days, shopping_items,
                         reasoning=args.reasoning)
+    if args.verb == "clear-inbox":
+        return clear_inbox(conn, household_id)
     raise ValueError(f"unknown verb {args.verb}")
 
 
