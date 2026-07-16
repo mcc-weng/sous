@@ -31,7 +31,7 @@ RITUAL_PROMPT = (pathlib.Path(__file__).resolve().parent.parent / "prompts" / "r
 
 RITUAL_VERBS = ["get-plan", "update-day", "swap-days", "add-shopping-item",
                "remove-shopping-item", "flag-staple", "capture-inbox",
-               "set-plan", "clear-inbox"]
+               "set-plan", "clear-inbox", "cancel-ritual"]
 
 RITUAL_PLACEHOLDERS = ["{persona_pack}", "{today}", "{weekday}", "{target_week_of}",
                        "{current_week_plan}", "{recent_weeks}", "{inbox}",

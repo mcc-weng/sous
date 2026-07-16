@@ -375,3 +375,64 @@ def test_cli_clear_inbox(api_hid):
     proc = _run_cli(["clear-inbox"], api_hid)
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout)["ok"] is True
+
+
+def test_cancel_ritual_removes_proposing_week(conn, api_hid):
+    target = _next_monday_for(datetime.date.today())
+    state_api._ensure_proposing_week_for_test(conn, api_hid, target)
+    out = state_api.cancel_ritual(conn, api_hid)
+    assert out == {"ok": True, "cancelled": 1}
+    row = conn.execute(
+        "select id from plan_weeks where household_id=%s and status='proposing'",
+        (api_hid,),
+    ).fetchone()
+    assert row is None
+
+
+def test_cancel_ritual_is_idempotent(conn, api_hid):
+    first = state_api.cancel_ritual(conn, api_hid)
+    second = state_api.cancel_ritual(conn, api_hid)
+    assert first == {"ok": True, "cancelled": 0}
+    assert second == {"ok": True, "cancelled": 0}
+
+
+def test_cancel_ritual_leaves_locked_weeks_alone(conn, api_hid):
+    target = _next_monday_for(datetime.date.today())
+    wid = conn.execute(
+        "insert into plan_weeks (household_id, week_of, status) "
+        "values (%s, %s, 'locked') returning id", (api_hid, target),
+    ).fetchone()[0]
+    out = state_api.cancel_ritual(conn, api_hid)
+    assert out == {"ok": True, "cancelled": 0}
+    status = conn.execute(
+        "select status from plan_weeks where id = %s", (wid,),
+    ).fetchone()[0]
+    assert status == "locked"
+
+
+def test_cancel_ritual_scopes_to_household(conn, api_hid):
+    target = _next_monday_for(datetime.date.today())
+    state_api._ensure_proposing_week_for_test(conn, SANDBOX, target)
+    try:
+        state_api.cancel_ritual(conn, api_hid)
+        row = conn.execute(
+            "select id from plan_weeks where household_id=%s and status='proposing'",
+            (SANDBOX,),
+        ).fetchone()
+        assert row is not None
+    finally:
+        conn.execute(
+            "delete from plan_weeks where household_id=%s and week_of=%s",
+            (SANDBOX, target),
+        )
+
+
+def test_cli_cancel_ritual(api_hid):
+    target = _next_monday_for(datetime.date.today())
+    import psycopg
+    with psycopg.connect(TEST_DB_URL, autocommit=True) as c:
+        state_api._ensure_proposing_week_for_test(c, api_hid, target)
+    proc = _run_cli(["cancel-ritual"], api_hid)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out == {"ok": True, "cancelled": 1}

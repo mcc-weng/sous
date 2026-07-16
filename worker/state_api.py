@@ -209,6 +209,19 @@ def clear_inbox(conn, household_id: str) -> dict:
     return {"ok": True, "removed": len(removed)}
 
 
+def cancel_ritual(conn, household_id: str) -> dict:
+    """Abandons an in-progress ritual — deletes the 'proposing' marker row so
+    routing falls back to plain chat on the next message. Never touches a
+    'locked' week; inbox_items are left alone since they weren't consumed by
+    a lock and should still be available to the next ritual attempt."""
+    removed = conn.execute(
+        "delete from plan_weeks where household_id = %s and status = 'proposing' "
+        "returning id",
+        (household_id,),
+    ).fetchall()
+    return {"ok": True, "cancelled": len(removed)}
+
+
 def _ensure_proposing_week_for_test(conn, household_id: str, week_of) -> str:
     """Test-only helper — production code creates this row via
     sous_worker.db.ensure_proposing_week from main.py, not from here."""
@@ -270,6 +283,7 @@ def _parser() -> argparse.ArgumentParser:
                     help='JSON array: [{"name","qty"?,"section"?}, ...]')
     sp.add_argument("--reasoning")
     sub.add_parser("clear-inbox")
+    sub.add_parser("cancel-ritual")
     return p
 
 
@@ -301,6 +315,8 @@ def _dispatch(conn, household_id: str, args) -> dict:
                         reasoning=args.reasoning)
     if args.verb == "clear-inbox":
         return clear_inbox(conn, household_id)
+    if args.verb == "cancel-ritual":
+        return cancel_ritual(conn, household_id)
     raise ValueError(f"unknown verb {args.verb}")
 
 
