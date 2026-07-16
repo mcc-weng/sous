@@ -53,6 +53,27 @@ def generate_chat_reply(conn, job: db.Job, cfg: dict) -> str:
                            extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
 
 
+def generate_ritual_reply(conn, job: db.Job, cfg: dict) -> str:
+    """Ritual mode: same shape as generate_chat_reply, but renders the ritual
+    context/prompt and deterministically ensures a 'proposing' plan_weeks row
+    exists for the target week before the brain runs (idempotent — a retry
+    re-enters this function and finds the row already there)."""
+    ctx = context.fetch_ritual_context(conn, job.household_id, cfg["history_limit"])
+    db.ensure_proposing_week(conn, job.household_id, ctx["target_week_of"])
+    template = (ROOT / "prompts" / "ritual.md").read_text()
+    new_message = ""
+    if job.payload.get("message_id"):
+        content = db.get_message_content(conn, job.payload["message_id"])
+        if content is not None:
+            new_message = f"user: {content}"
+    prompt = context.build_ritual_prompt(template, ctx, new_message or "(none)")
+    return brain.run_brain(prompt, model=cfg["chat_model"],
+                           timeout=cfg["chat_timeout_sec"],
+                           allowed_tools=cfg["chat_allowed_tools"],
+                           cwd=str(ROOT),
+                           extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
+
+
 def process_one(conn, cfg: dict) -> bool:
     for job_id in db.requeue_stale(conn, cfg["stale_after_sec"], cfg["max_attempts"]):
         hid = db.get_job_household(conn, job_id)
@@ -62,18 +83,14 @@ def process_one(conn, cfg: dict) -> bool:
     if job is None:
         return False
     try:
-        if job.kind == "chat":
-            # The slow part (context fetch + the claude -p subprocess call)
-            # runs with no transaction open — see generate_chat_reply.
-            reply = generate_chat_reply(conn, job, cfg)
-            # Only the reply-insert and job-completion are atomic: if
-            # complete_job throws after the reply is written, the rollback
-            # here undoes the reply too, so a requeue-and-retry never
-            # produces a duplicate chef reply. This window is fast (two
-            # UPDATEs/INSERTs), so no idle-in-transaction risk.
+        if job.kind in ("chat", "ritual"):
+            mode = ("ritual" if job.kind == "ritual"
+                    or db.get_proposing_week(conn, job.household_id) else "chat")
+            reply = (generate_ritual_reply(conn, job, cfg) if mode == "ritual"
+                     else generate_chat_reply(conn, job, cfg))
             with conn.transaction():
                 db.insert_chef_message(conn, job.household_id, reply, job.id)
-                db.complete_job(conn, job.id, {"reply_chars": len(reply)})
+                db.complete_job(conn, job.id, {"reply_chars": len(reply), "mode": mode})
         else:
             raise ValueError(f"unknown job kind: {job.kind}")
     except Exception as exc:  # noqa: BLE001 — worker must never die on one job
