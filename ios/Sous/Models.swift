@@ -62,6 +62,14 @@ struct PlanWeek: Codable, Identifiable, Equatable {
     }
 }
 
+struct ShoppingItem: Codable, Identifiable, Equatable {
+    let id: UUID
+    let name: String
+    let qty: String?
+    let section: String?
+    var checked: Bool
+}
+
 struct Household: Codable {
     let id: UUID
     let name: String
