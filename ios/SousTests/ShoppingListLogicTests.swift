@@ -49,4 +49,17 @@ final class ShoppingListLogicTests: XCTestCase {
         let grouped = groupedShoppingItems(items)
         XCTAssertEqual(grouped.first?.items.map(\.name), ["aaa-unchecked", "zzz-checked"])
     }
+
+    func testGroupedItemsMergesDifferentCasingOfSameSection() {
+        // Items with the same canonical section but different casing
+        // (e.g., "produce" vs "Produce") must merge into a single group.
+        let items = [
+            ShoppingItem(id: UUID(), name: "carrot", qty: nil, section: "produce", checked: false),
+            ShoppingItem(id: UUID(), name: "lettuce", qty: nil, section: "Produce", checked: false),
+        ]
+        let grouped = groupedShoppingItems(items)
+        XCTAssertEqual(grouped.count, 1, "Items with different casing should merge into one group")
+        XCTAssertEqual(grouped.first?.items.count, 2, "Both items should be in the merged group")
+        XCTAssertEqual(grouped.first?.items.map(\.name).sorted(), ["carrot", "lettuce"])
+    }
 }

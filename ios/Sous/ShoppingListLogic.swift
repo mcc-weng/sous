@@ -12,9 +12,15 @@ private let sectionRank: [String: Int] = [
     "breakfast": 4,
 ]
 
+/// Normalize a section string by lowercasing and trimming whitespace.
+/// Used consistently for both grouping and sorting to ensure sections with
+/// different casing (e.g., "produce" vs "Produce") are treated identically.
+private func normalizedSectionKey(_ section: String?) -> String {
+    (section ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+}
+
 private func sectionSortKey(_ section: String?) -> Int {
-    let key = (section ?? "").lowercased().trimmingCharacters(in: .whitespaces)
-    return sectionRank[key] ?? 99
+    return sectionRank[normalizedSectionKey(section)] ?? 99
 }
 
 struct ShoppingSectionGroup: Equatable {
@@ -22,19 +28,21 @@ struct ShoppingSectionGroup: Equatable {
     let items: [ShoppingItem]
 }
 
-/// Groups items by their raw `section` string (display-cased verbatim, whatever the DB
-/// has), sorted into canonical order. Within each section, unchecked items come first
-/// and checked items sink to the bottom (not to a separate global done-pile), so
-/// everything stays findable by aisle even once partially checked off.
+/// Groups items by their normalized section key (lowercased and trimmed), ensuring items with
+/// the same canonical section but different casing merge into one group. Within each section,
+/// unchecked items come first and checked items sink to the bottom (not to a separate global
+/// done-pile), so everything stays findable by aisle even once partially checked off.
+/// The display section name is the first item's raw section value (preserving original casing).
 func groupedShoppingItems(_ items: [ShoppingItem]) -> [ShoppingSectionGroup] {
-    let bySection = Dictionary(grouping: items) { $0.section ?? "" }
-    return bySection
-        .map { section, items -> ShoppingSectionGroup in
-            let sorted = items.sorted { a, b in
+    let byNormalizedSection = Dictionary(grouping: items) { normalizedSectionKey($0.section) }
+    return byNormalizedSection
+        .map { _, groupItems -> ShoppingSectionGroup in
+            let displaySection = groupItems.first?.section ?? ""
+            let sorted = groupItems.sorted { a, b in
                 if a.checked != b.checked { return !a.checked }
                 return a.name < b.name
             }
-            return ShoppingSectionGroup(section: section, items: sorted)
+            return ShoppingSectionGroup(section: displaySection, items: sorted)
         }
         .sorted { a, b in
             let rankA = sectionSortKey(a.section)
