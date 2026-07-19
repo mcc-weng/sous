@@ -29,5 +29,6 @@ struct ShoppingListView: View {
             }
         }
         .listStyle(.plain)
+        .task { await model.loadShoppingItems() }
     }
 }

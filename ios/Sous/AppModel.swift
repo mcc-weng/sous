@@ -24,7 +24,7 @@ final class AppModel: ObservableObject {
         session = try? await client.auth.session
         if session != nil {
             await loadAll()
-            subscribe()
+            startPresencePoll()
         }
     }
 
@@ -33,7 +33,7 @@ final class AppModel: ObservableObject {
             credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
         )
         await loadAll()
-        subscribe()
+        startPresencePoll()
     }
 
     // MARK: data
@@ -135,15 +135,24 @@ final class AppModel: ObservableObject {
     }
 
     /// Direct write, no job — instant, matching the shopping-list spec's "no brain
-    /// round-trip for checkboxes" decision.
+    /// round-trip for checkboxes" decision. Updates local state optimistically rather
+    /// than waiting on a realtime round-trip: checking an item is a pure local action
+    /// with no brain involved, so there's no reason "instant" should depend on realtime
+    /// delivery at all. Reverts on write failure.
     func toggleShoppingItem(_ item: ShoppingItem) async {
+        guard let index = shoppingItems.firstIndex(where: { $0.id == item.id }) else { return }
+        let newChecked = !item.checked
+        shoppingItems[index].checked = newChecked
         struct Update: Encodable { let checked: Bool }
         do {
             try await client.from("shopping_items")
-                .update(Update(checked: !item.checked))
+                .update(Update(checked: newChecked))
                 .eq("id", value: item.id)
                 .execute()
-        } catch { print("toggle shopping item: \(error)") }
+        } catch {
+            print("toggle shopping item: \(error)")
+            shoppingItems[index].checked = !newChecked
+        }
     }
 
     private func sendSystemAction(_ text: String, jobKind: String) async {
@@ -164,56 +173,47 @@ final class AppModel: ObservableObject {
                 .insert(NewMessage(household_id: household.id, sender: "user", content: text))
                 .select("id,sender,content,created_at").single().execute().value
             messages.append(inserted)
+            let countBeforeReply = messages.count
             try await client.from("jobs")
                 .insert(NewJob(household_id: household.id, kind: jobKind,
                                payload: .init(message_id: inserted.id)))
                 .execute()
+            await waitForReply(after: countBeforeReply)
         } catch { print("sendSystemAction: \(error)") }
     }
 
-    // MARK: realtime — refetch on insert (simple and correct for a skeleton)
-
-    private var subscribed = false
-
-    func subscribe() {
-        guard !subscribed else { return }
-        subscribed = true
-        Task {
-            let channel = client.channel("kitchen")
-            let inserts = channel.postgresChange(
-                InsertAction.self, schema: "public", table: "chat_messages"
-            )
-            let planChanges = channel.postgresChange(
-                AnyAction.self, schema: "public", table: "plan_days"
-            )
-            let weekChanges = channel.postgresChange(
-                AnyAction.self, schema: "public", table: "plan_weeks"
-            )
-            let shoppingChanges = channel.postgresChange(
-                AnyAction.self, schema: "public", table: "shopping_items"
-            )
-            await channel.subscribe()
-            Task {
-                for await _ in planChanges {
-                    await loadTonight()
-                    await loadWeekBoard()
-                }
-            }
-            Task {
-                for await _ in weekChanges {
-                    await loadWeekBoard()
-                }
-            }
-            Task {
-                for await _ in shoppingChanges {
-                    await loadShoppingItems()
-                }
-            }
-            for await _ in inserts {
-                await loadMessages()
+    /// Polls for the chef's reply instead of waiting on a realtime push — this app's
+    /// scale (one household, occasional messages, replies that already take seconds to
+    /// minutes to generate) doesn't need WebSocket-level push, and a real-device exit
+    /// check (2026-07-19) found the realtime channel never actually delivered postgres_changes
+    /// for this project regardless of role/JWT/SDK version, root cause unresolved. A 2s
+    /// poll adds no perceptible delay on top of the brain's own response time. Every
+    /// action that expects a reaction (chat, ritual start, swap) always ends in a new
+    /// chat_messages row per the worker's prompt contract, so waiting for that single
+    /// signal covers refreshing after all three — the actual effect (a plan/shopping
+    /// change) is picked up by the loadWeekBoard()/loadShoppingItems() refresh once the
+    /// reply lands, not by tracking each action's specific side effect.
+    private func waitForReply(after countBeforeReply: Int) async {
+        for _ in 0..<90 {  // 2s * 90 = 180s safety net — covers the ~100-150s ritual turn
+            try? await Task.sleep(for: .seconds(2))
+            await loadMessages()
+            if messages.count > countBeforeReply {
+                await loadTonight()
+                await loadWeekBoard()
+                await loadShoppingItems()
+                return
             }
         }
-        Task { // presence poll — heartbeat is 15s, refresh at 30s
+    }
+
+    // MARK: presence poll (heartbeat is 15s, refresh at 30s)
+
+    private var presencePollStarted = false
+
+    func startPresencePoll() {
+        guard !presencePollStarted else { return }
+        presencePollStarted = true
+        Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(30))
                 await refreshHousehold()

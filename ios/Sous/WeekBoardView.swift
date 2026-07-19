@@ -27,6 +27,7 @@ struct WeekBoardView: View {
         .listStyle(.plain)
         .onChange(of: model.nextWeekDays) { _, _ in pendingSwapDates.removeAll(); selectedForSwap = nil }
         .onChange(of: model.thisWeekDays) { _, _ in pendingSwapDates.removeAll(); selectedForSwap = nil }
+        .task { await model.loadWeekBoard() }
     }
 
     @ViewBuilder
