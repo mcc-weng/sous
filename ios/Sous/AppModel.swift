@@ -79,7 +79,8 @@ final class AppModel: ObservableObject {
     func loadWeekBoard() async {
         guard let household else { return }
         let tz = TimeZone(identifier: household.timezone) ?? .current
-        let calendar = Calendar(identifier: .gregorian)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = tz
         let thisMonday = weekMonday(for: Date(), timezone: tz)
         let nextMonday = calendar.date(byAdding: .day, value: 7, to: thisMonday)!
         let rangeEnd = calendar.date(byAdding: .day, value: 14, to: thisMonday)!

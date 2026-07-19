@@ -4,6 +4,8 @@ import UniformTypeIdentifiers
 struct WeekBoardView: View {
     @EnvironmentObject private var model: AppModel
     @State private var expandedDayID: UUID?
+    // No auto-clear on failure — matches the plan's "no client-side timeout" constraint.
+    // Recovery is dismiss/reopen (resets @State) or the cancel-ritual escape hatch via chat.
     @State private var pendingRitualStart = false
     @State private var pendingSwapDates: Set<String> = []
 
@@ -21,7 +23,6 @@ struct WeekBoardView: View {
         .listStyle(.plain)
         .onChange(of: model.nextWeekDays) { _, _ in pendingSwapDates.removeAll() }
         .onChange(of: model.thisWeekDays) { _, _ in pendingSwapDates.removeAll() }
-        .onChange(of: model.nextWeek) { _, _ in pendingRitualStart = false }
     }
 
     @ViewBuilder
