@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct WeekBoardView: View {
     @EnvironmentObject private var model: AppModel
@@ -70,17 +69,12 @@ struct WeekBoardView: View {
             .onTapGesture {
                 expandedDayID = expandedDayID == day.id ? nil : day.id
             }
-            .onDrag { NSItemProvider(object: day.date as NSString) }
-            .onDrop(of: [.text], isTargeted: nil) { providers in
-                guard let provider = providers.first else { return false }
-                _ = provider.loadObject(ofClass: NSString.self) { reading, _ in
-                    guard let draggedDate = reading as? String, draggedDate != day.date else { return }
-                    Task { @MainActor in
-                        pendingSwapDates.insert(draggedDate)
-                        pendingSwapDates.insert(day.date)
-                        await model.requestSwap(dateA: draggedDate, dateB: day.date)
-                    }
-                }
+            .draggable(day.date)
+            .dropDestination(for: String.self) { items, _ in
+                guard let draggedDate = items.first, draggedDate != day.date else { return false }
+                pendingSwapDates.insert(draggedDate)
+                pendingSwapDates.insert(day.date)
+                Task { await model.requestSwap(dateA: draggedDate, dateB: day.date) }
                 return true
             }
         }
