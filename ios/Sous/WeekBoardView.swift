@@ -7,6 +7,11 @@ struct WeekBoardView: View {
     // Recovery is dismiss/reopen (resets @State) or the cancel-ritual escape hatch via chat.
     @State private var pendingRitualStart = false
     @State private var pendingSwapDates: Set<String> = []
+    // Long-press-to-select-then-swap: a real-device exit check found List row-to-row
+    // drag-and-drop unreliable with both onDrag/onDrop and draggable/dropDestination
+    // (drop target never registered a hover or drop, with or without a competing tap
+    // gesture) — this achieves the same swap outcome with plain, reliable gestures.
+    @State private var selectedForSwap: String?
 
     var body: some View {
         List {
@@ -20,8 +25,8 @@ struct WeekBoardView: View {
             }
         }
         .listStyle(.plain)
-        .onChange(of: model.nextWeekDays) { _, _ in pendingSwapDates.removeAll() }
-        .onChange(of: model.thisWeekDays) { _, _ in pendingSwapDates.removeAll() }
+        .onChange(of: model.nextWeekDays) { _, _ in pendingSwapDates.removeAll(); selectedForSwap = nil }
+        .onChange(of: model.thisWeekDays) { _, _ in pendingSwapDates.removeAll(); selectedForSwap = nil }
     }
 
     @ViewBuilder
@@ -57,6 +62,10 @@ struct WeekBoardView: View {
                         Text(statusLabel(day.status)).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
+                    if selectedForSwap == day.date {
+                        Image(systemName: "arrow.left.arrow.right.circle.fill")
+                            .foregroundStyle(Color.accentColor)
+                    }
                     if let prep = day.prepNote {
                         Text(prep).font(.caption2).foregroundStyle(.secondary)
                     }
@@ -66,18 +75,29 @@ struct WeekBoardView: View {
                 }
             }
             .contentShape(Rectangle())
+            .listRowBackground(selectedForSwap == day.date ? Color.accentColor.opacity(0.15) : nil)
             .onTapGesture {
                 expandedDayID = expandedDayID == day.id ? nil : day.id
             }
-            .draggable(day.date)
-            .dropDestination(for: String.self) { items, _ in
-                guard let draggedDate = items.first, draggedDate != day.date else { return false }
-                pendingSwapDates.insert(draggedDate)
-                pendingSwapDates.insert(day.date)
-                Task { await model.requestSwap(dateA: draggedDate, dateB: day.date) }
-                return true
+            .onLongPressGesture {
+                handleLongPress(on: day.date)
             }
         }
+    }
+
+    private func handleLongPress(on date: String) {
+        guard let selected = selectedForSwap else {
+            selectedForSwap = date
+            return
+        }
+        if selected == date {
+            selectedForSwap = nil // long-press the same day again to cancel
+            return
+        }
+        pendingSwapDates.insert(selected)
+        pendingSwapDates.insert(date)
+        selectedForSwap = nil
+        Task { await model.requestSwap(dateA: selected, dateB: date) }
     }
 
     private func pendingRow(text: String) -> some View {
