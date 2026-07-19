@@ -72,12 +72,15 @@
    `set-plan` 的 `--days` JSON,呼叫:
    ```
    .venv/bin/python state_api.py set-plan \
-     --days '[{"date":"2026-07-20","dish":"三杯雞","mode":"fast","prep_note":"雞腿前一晚醃"}, ...共 7 筆...]' \
+     --days '[{"date":"2026-07-20","dish":"三杯雞","mode":"fast","prep_note":"雞腿前一晚醃","reasoning":"清冰箱的雞腿,fast 兼顧下班後時間"}, ...共 7 筆...]' \
      --shopping-items '[{"name":"chicken thigh fillets","qty":"4","section":"meat"}, ...]' \
      --reasoning "這週摘要:三個 fast、一個 batch、兩個 play,主打清冰箱的雞胸跟..."
    ```
    `--days` 一定要剛好 7 筆,涵蓋目標週的週一到週日,每天都要有 dish(哪怕是
-   「外食」)。`--shopping-items` 名稱一律英文(Woolworths 真實品名),依照
+   「外食」)。每天也要有 `reasoning`(一句話,為什麼選這道菜/這個 mode —
+   例如清冰箱、對照最近評價、呼應 inbox 的某個 craving)— 這是 iOS app 裡
+   Week board 點開單日看到的說明文字,沒有就顯示空白,不要省略。
+   `--shopping-items` 名稱一律英文(Woolworths 真實品名),依照
    Produce/Meat & seafood/Dairy & fridge/Pantry/Breakfast 分類到 `section`。
    ingredient 要涵蓋每道菜的配菜/湯,不只是主菜;常備品(staples,非
    staples_flagged 標記快用完的)不用列進清單。
