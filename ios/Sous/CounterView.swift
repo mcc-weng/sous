@@ -2,14 +2,41 @@ import SwiftUI
 
 struct CounterView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var showWeekBoard = false
+    @State private var showShoppingList = false
 
     var body: some View {
         VStack(spacing: 0) {
             header
             tonightCard
+            chipRow
             Divider()
             ChatView()
         }
+        .sheet(isPresented: $showWeekBoard) {
+            WeekBoardView().environmentObject(model)
+        }
+        .sheet(isPresented: $showShoppingList) {
+            ShoppingListView().environmentObject(model)
+        }
+    }
+
+    private var chipRow: some View {
+        HStack(spacing: 12) {
+            Button {
+                showWeekBoard = true
+            } label: {
+                Label("本週", systemImage: "calendar")
+            }
+            Button {
+                showShoppingList = true
+            } label: {
+                Label("買菜 \(uncheckedCount(model.shoppingItems))", systemImage: "cart")
+            }
+        }
+        .buttonStyle(.bordered)
+        .padding(.horizontal)
+        .padding(.bottom, 8)
     }
 
     private var header: some View {
