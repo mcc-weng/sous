@@ -68,11 +68,16 @@ final class AppModel: ObservableObject {
 
     func loadMessages() async {
         do {
-            messages = try await client.from("chat_messages")
+            // Descending + limit, then reverse — ascending + limit would return the
+            // OLDEST 100 once the conversation grows past 100, silently hiding every
+            // new reply from then on (and permanently breaking waitForReply's completion
+            // check, which depends on new messages actually showing up here).
+            let recent: [ChatMessage] = try await client.from("chat_messages")
                 .select("id,sender,content,created_at")
-                .order("created_at", ascending: true)
+                .order("created_at", ascending: false)
                 .limit(100)
                 .execute().value
+            messages = Array(recent.reversed())
         } catch { print("messages load: \(error)") }
     }
 
@@ -151,7 +156,13 @@ final class AppModel: ObservableObject {
                 .execute()
         } catch {
             print("toggle shopping item: \(error)")
-            shoppingItems[index].checked = !newChecked
+            // Re-find by id rather than reusing `index` — a concurrent loadShoppingItems()
+            // (e.g. from waitForReply, or the sheet's own .task on reappear) can replace
+            // the whole array while this write is in flight, making the captured index
+            // stale (wrong item, or out of bounds — a hard crash on direct subscript).
+            if let current = shoppingItems.firstIndex(where: { $0.id == item.id }) {
+                shoppingItems[current].checked = !newChecked
+            }
         }
     }
 
@@ -173,12 +184,11 @@ final class AppModel: ObservableObject {
                 .insert(NewMessage(household_id: household.id, sender: "user", content: text))
                 .select("id,sender,content,created_at").single().execute().value
             messages.append(inserted)
-            let countBeforeReply = messages.count
             try await client.from("jobs")
                 .insert(NewJob(household_id: household.id, kind: jobKind,
                                payload: .init(message_id: inserted.id)))
                 .execute()
-            await waitForReply(after: countBeforeReply)
+            await waitForReply(after: inserted.createdAt)
         } catch { print("sendSystemAction: \(error)") }
     }
 
@@ -192,12 +202,19 @@ final class AppModel: ObservableObject {
     /// chat_messages row per the worker's prompt contract, so waiting for that single
     /// signal covers refreshing after all three — the actual effect (a plan/shopping
     /// change) is picked up by the loadWeekBoard()/loadShoppingItems() refresh once the
-    /// reply lands, not by tracking each action's specific side effect.
-    private func waitForReply(after countBeforeReply: Int) async {
-        for _ in 0..<90 {  // 2s * 90 = 180s safety net — covers the ~100-150s ritual turn
+    /// reply lands, not by tracking each action's specific side effect. Watches for an
+    /// actual chef reply newer than the message just sent, rather than a raw count —
+    /// a second action firing concurrently (e.g. a swap triggered while a chat reply is
+    /// still pending) would otherwise satisfy this one's count with a message that isn't
+    /// really its reply.
+    private func waitForReply(after sentAt: Date) async {
+        // A single ritual round-trip (bootstrap → craving deck → picks → proposal → lock)
+        // is several separate sendSystemAction calls, one per touchpoint — this only ever
+        // waits for the one reply to the message just sent, not the whole ritual.
+        for _ in 0..<90 {  // 2s * 90 = 180s safety net
             try? await Task.sleep(for: .seconds(2))
             await loadMessages()
-            if messages.count > countBeforeReply {
+            if messages.contains(where: { $0.sender == "chef" && $0.createdAt > sentAt }) {
                 await loadTonight()
                 await loadWeekBoard()
                 await loadShoppingItems()
