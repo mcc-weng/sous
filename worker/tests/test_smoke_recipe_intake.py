@@ -23,7 +23,11 @@ RECIPE_URL = "https://www.youtube.com/watch?v=REPLACE_WITH_REAL_RECIPE_VIDEO_ID"
 
 def test_recipe_intake_end_to_end(conn, monkeypatch):
     monkeypatch.setenv("SOUS_DB_URL", TEST_DB_URL)
-    conn.execute("delete from recipes where household_id=%s", (SANDBOX,))
+    conn.execute(
+        "delete from recipes where household_id=%s and id not in "
+        "(select recipe_id from plan_days where recipe_id is not null)",
+        (SANDBOX,),
+    )
     conn.execute("delete from inbox_items where household_id=%s and kind='craving'",
                  (SANDBOX,))
     jid = conn.execute(
