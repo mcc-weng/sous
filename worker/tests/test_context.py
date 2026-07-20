@@ -197,3 +197,44 @@ def test_build_ritual_prompt_substitutes_everything(conn):
     prompt = context.build_ritual_prompt(template, ctx, "user: 開始本週儀式")
     assert "開始本週儀式" in prompt
     assert "{" not in prompt.replace("{}", "")
+
+
+def test_fetch_recipe_intake_context_returns_household(conn):
+    ctx = context.fetch_recipe_intake_context(conn, SANDBOX)
+    assert "小當家" in ctx["household"]["prompt_pack"]
+    assert ctx["now"] is not None
+
+
+def test_fetch_recipe_intake_context_uses_provided_now(conn):
+    fixed = datetime.datetime(2030, 1, 9, 18, 0, tzinfo=ZoneInfo("Australia/Sydney"))
+    ctx = context.fetch_recipe_intake_context(conn, SANDBOX, now=fixed)
+    assert ctx["now"] is fixed
+
+
+def test_render_prefetch_gemini_source():
+    rendered = context._render_prefetch({"source": "gemini", "understanding": "看到雞腿肉..."})
+    assert "看到雞腿肉" in rendered
+
+
+def test_render_prefetch_caption_source():
+    rendered = context._render_prefetch(
+        {"source": "caption", "title": "三杯雞食譜", "uploader": "chef", "description": "desc"})
+    assert "三杯雞食譜" in rendered
+
+
+def test_render_prefetch_none_source_is_honest():
+    rendered = context._render_prefetch({"source": "none", "error": "not a video"})
+    assert "WebFetch" in rendered
+
+
+def test_build_recipe_intake_prompt_substitutes_everything(conn):
+    template = "{persona_pack}\n{today}\n{weekday}\n{url}\n{by}\n{prefetched_context}"
+    ctx = context.fetch_recipe_intake_context(conn, SANDBOX)
+    prompt = context.build_recipe_intake_prompt(
+        template, ctx, "https://instagram.com/reel/abc", "mike",
+        {"source": "gemini", "understanding": "食譜內容"},
+    )
+    assert "https://instagram.com/reel/abc" in prompt
+    assert "mike" in prompt
+    assert "食譜內容" in prompt
+    assert "{" not in prompt.replace("{}", "")

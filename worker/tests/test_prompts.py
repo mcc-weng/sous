@@ -64,3 +64,25 @@ def test_ritual_prompt_references_the_skill_file():
 
 def test_ritual_prompt_states_two_touchpoint_rule():
     assert "兩" in RITUAL_PROMPT and ("觸點" in RITUAL_PROMPT or "問題" in RITUAL_PROMPT)
+
+
+RECIPE_INTAKE_PROMPT = (pathlib.Path(__file__).resolve().parent.parent / "prompts" / "recipe_intake.md").read_text()
+
+RECIPE_INTAKE_VERBS = ["save-recipe", "capture-inbox"]
+RECIPE_INTAKE_PLACEHOLDERS = ["{persona_pack}", "{today}", "{weekday}", "{url}",
+                              "{by}", "{prefetched_context}"]
+
+
+def test_recipe_intake_prompt_documents_every_verb():
+    for verb in RECIPE_INTAKE_VERBS:
+        assert verb in RECIPE_INTAKE_PROMPT, f"recipe_intake.md must document {verb}"
+    assert ".venv/bin/python state_api.py" in RECIPE_INTAKE_PROMPT
+
+
+def test_recipe_intake_prompt_is_persona_neutral():
+    assert "小當家" not in RECIPE_INTAKE_PROMPT
+
+
+def test_recipe_intake_prompt_keeps_all_placeholders():
+    for ph in RECIPE_INTAKE_PLACEHOLDERS:
+        assert ph in RECIPE_INTAKE_PROMPT

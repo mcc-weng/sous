@@ -196,3 +196,36 @@ def build_chat_prompt(template: str, ctx: dict, new_messages: str) -> str:
         .replace("{history}", ctx["history"])
         .replace("{messages}", new_messages)
     )
+
+
+def _render_prefetch(prefetch: dict) -> str:
+    source = prefetch.get("source")
+    if source == "gemini":
+        return f"### Gemini 完整理解(已看過影片)\n{prefetch['understanding']}"
+    if source == "caption":
+        title = prefetch.get("title") or ""
+        description = prefetch.get("description") or ""
+        return f"### 貼文/影片標題與說明(系統已自動抓取,未看影片本身)\n{title}\n{description}"
+    return "(這個連結不是已知的影片平台,或抓取失敗 — 用 WebFetch 直接讀網址內容)"
+
+
+def fetch_recipe_intake_context(conn, household_id: str,
+                                now: datetime.datetime | None = None) -> dict:
+    household = db.get_household(conn, household_id)
+    if now is None:
+        now = datetime.datetime.now(ZoneInfo(household["timezone"]))
+    return {"household": household, "now": now}
+
+
+def build_recipe_intake_prompt(template: str, ctx: dict, url: str, by: str,
+                               prefetch: dict) -> str:
+    now = ctx["now"]
+    return (
+        template
+        .replace("{persona_pack}", ctx["household"]["prompt_pack"])
+        .replace("{today}", now.strftime("%Y-%m-%d"))
+        .replace("{weekday}", _WEEKDAYS_ZH[now.weekday()])
+        .replace("{url}", url)
+        .replace("{by}", by)
+        .replace("{prefetched_context}", _render_prefetch(prefetch))
+    )
