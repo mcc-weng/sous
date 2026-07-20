@@ -5,6 +5,7 @@ requires-python = ">=3.11"
 dependencies = [
     "psycopg[binary]>=3.2",
     "python-dotenv>=1.0",
+    "google-genai>=1.0",
 ]
 
 [dependency-groups]
