@@ -100,7 +100,7 @@ def test_generate_chat_reply_wires_tools_env_cwd(conn, chat_job, monkeypatch):
 
 def test_unknown_job_kind_fails_cleanly(conn):
     jid = conn.execute(
-        "insert into jobs (household_id, kind) values (%s,'recipe_intake') returning id::text",
+        "insert into jobs (household_id, kind) values (%s,'bogus_kind') returning id::text",
         (SANDBOX,),
     ).fetchone()[0]
     cfg = _cfg() | {"max_attempts": 1}
@@ -204,3 +204,43 @@ def test_chat_job_uses_chat_prompt_when_no_active_ritual(conn, monkeypatch):
     assert main.process_one(conn, main.load_config()) is True
     assert "你的手(state_api" in seen["prompt"]  # chat.md's verb section header
     assert "target_week_of" not in seen["prompt"]  # ritual-only placeholder absent
+
+
+def _insert_recipe_intake_job(conn, url: str, by: str = "mike"):
+    jid = conn.execute(
+        "insert into jobs (household_id, kind, payload) "
+        "values (%s, 'recipe_intake', %s) returning id::text",
+        (SANDBOX, Jsonb({"url": url, "by": by})),
+    ).fetchone()[0]
+    return jid
+
+
+def test_recipe_intake_job_runs_prefetch_and_wires_prompt(conn, monkeypatch):
+    seen = {}
+
+    def fake_prefetch(url):
+        seen["prefetch_url"] = url
+        return {"source": "caption", "title": "三杯雞", "uploader": "x", "description": "y"}
+
+    def fake_run_brain(prompt, **kw):
+        seen["prompt"] = prompt
+        seen.update(kw)
+        return "存好了!🔥 三杯雞排進下週候選了"
+
+    monkeypatch.setattr(main.gemini_intake, "fetch_recipe_context", fake_prefetch)
+    monkeypatch.setattr(main.brain, "run_brain", fake_run_brain)
+    jid = _insert_recipe_intake_job(conn, "https://instagram.com/reel/abc")
+    assert main.process_one(conn, main.load_config()) is True
+
+    assert seen["prefetch_url"] == "https://instagram.com/reel/abc"
+    assert "三杯雞" in seen["prompt"]          # caption title rendered into the prompt
+    assert "WebFetch" in seen["allowed_tools"]
+    assert seen["extra_env"] == {"SOUS_HOUSEHOLD_ID": SANDBOX}
+
+    sender, content, job_id = conn.execute(
+        "select sender, content, job_id::text from chat_messages "
+        "where sender='chef' order by created_at desc limit 1"
+    ).fetchone()
+    assert content == "存好了!🔥 三杯雞排進下週候選了" and job_id == jid
+    result = conn.execute("select result from jobs where id=%s", (jid,)).fetchone()[0]
+    assert result["mode"] == "recipe_intake"

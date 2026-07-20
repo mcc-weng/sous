@@ -10,7 +10,7 @@ import time
 
 from dotenv import load_dotenv
 
-from sous_worker import brain, context, db
+from sous_worker import brain, context, db, gemini_intake
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent  # worker/
 log = logging.getLogger("sous_worker")
@@ -74,6 +74,23 @@ def generate_ritual_reply(conn, job: db.Job, cfg: dict) -> str:
                            extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
 
 
+def generate_recipe_intake_reply(conn, job: db.Job, cfg: dict) -> str:
+    """Recipe intake: a worker-side, deterministic Gemini pre-fetch (ported
+    from alfred's listener.py) runs before the brain is invoked at all — the
+    brain never calls the video pipeline itself, only sees rendered text."""
+    url = job.payload["url"]
+    by = job.payload.get("by", "someone")
+    prefetch = gemini_intake.fetch_recipe_context(url)
+    ctx = context.fetch_recipe_intake_context(conn, job.household_id)
+    template = (ROOT / "prompts" / "recipe_intake.md").read_text()
+    prompt = context.build_recipe_intake_prompt(template, ctx, url, by, prefetch)
+    return brain.run_brain(prompt, model=cfg["chat_model"],
+                           timeout=cfg["recipe_intake_timeout_sec"],
+                           allowed_tools=cfg["recipe_intake_allowed_tools"],
+                           cwd=str(ROOT),
+                           extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
+
+
 def process_one(conn, cfg: dict) -> bool:
     for job_id in db.requeue_stale(conn, cfg["stale_after_sec"], cfg["max_attempts"]):
         hid = db.get_job_household(conn, job_id)
@@ -88,11 +105,14 @@ def process_one(conn, cfg: dict) -> bool:
                     or db.get_proposing_week(conn, job.household_id) else "chat")
             reply = (generate_ritual_reply(conn, job, cfg) if mode == "ritual"
                      else generate_chat_reply(conn, job, cfg))
-            with conn.transaction():
-                db.insert_chef_message(conn, job.household_id, reply, job.id)
-                db.complete_job(conn, job.id, {"reply_chars": len(reply), "mode": mode})
+        elif job.kind == "recipe_intake":
+            mode = "recipe_intake"
+            reply = generate_recipe_intake_reply(conn, job, cfg)
         else:
             raise ValueError(f"unknown job kind: {job.kind}")
+        with conn.transaction():
+            db.insert_chef_message(conn, job.household_id, reply, job.id)
+            db.complete_job(conn, job.id, {"reply_chars": len(reply), "mode": mode})
     except Exception as exc:  # noqa: BLE001 — worker must never die on one job
         log.exception("job %s failed (attempt %d)", job.id, job.attempts)
         if job.attempts >= cfg["max_attempts"]:
