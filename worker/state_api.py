@@ -20,10 +20,12 @@ import datetime
 import json
 import os
 import pathlib
+import re
 import sys
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
+from psycopg.types.json import Jsonb
 
 # Invoked with cwd = worker/, so the script dir is on sys.path.
 from sous_worker.context import week_monday
@@ -222,6 +224,42 @@ def cancel_ritual(conn, household_id: str) -> dict:
     return {"ok": True, "cancelled": len(removed)}
 
 
+def _slugify(text: str) -> str:
+    text = text.strip().lower()
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    return text.strip("-")
+
+
+def save_recipe(conn, household_id: str, title: str, ingredients: list, steps: list,
+                source_block: str, body_md: str = "", slug: str | None = None) -> dict:
+    if not ingredients:
+        raise ValueError("ingredients must be a non-empty list")
+    for ing in ingredients:
+        if "name" not in ing:
+            raise ValueError('each ingredient needs a "name"')
+    if not steps:
+        raise ValueError("steps must be a non-empty list")
+    for st in steps:
+        if "text" not in st:
+            raise ValueError('each step needs "text"')
+    resolved_slug = _slugify(slug or title)
+    if not resolved_slug:
+        raise ValueError("empty slug after deriving from title — pass an explicit "
+                         "--slug for non-Latin titles")
+    row = conn.execute(
+        "insert into recipes (household_id, slug, title, source_block, body_md, "
+        "ingredients, steps) values (%s, %s, %s, %s, %s, %s, %s) "
+        "on conflict (household_id, slug) do update set "
+        "title = excluded.title, source_block = excluded.source_block, "
+        "body_md = excluded.body_md, ingredients = excluded.ingredients, "
+        "steps = excluded.steps "
+        "returning id::text, (xmax = 0) as inserted",
+        (household_id, resolved_slug, title, source_block, body_md,
+         Jsonb(ingredients), Jsonb(steps)),
+    ).fetchone()
+    return {"ok": True, "id": row[0], "slug": resolved_slug, "created": row[1]}
+
+
 def _ensure_proposing_week_for_test(conn, household_id: str, week_of) -> str:
     """Test-only helper — production code creates this row via
     sous_worker.db.ensure_proposing_week from main.py, not from here."""
@@ -284,6 +322,15 @@ def _parser() -> argparse.ArgumentParser:
     sp.add_argument("--reasoning")
     sub.add_parser("clear-inbox")
     sub.add_parser("cancel-ritual")
+    sr = sub.add_parser("save-recipe")
+    sr.add_argument("--title", required=True)
+    sr.add_argument("--slug")
+    sr.add_argument("--source-block", dest="source_block", required=True)
+    sr.add_argument("--body-md", dest="body_md", default="")
+    sr.add_argument("--ingredients", required=True,
+                    help='JSON array: [{"name","qty"?}, ...]')
+    sr.add_argument("--steps", required=True,
+                    help='JSON array: [{"text","duration_sec"?,"tip"?}, ...]')
     return p
 
 
@@ -317,6 +364,14 @@ def _dispatch(conn, household_id: str, args) -> dict:
         return clear_inbox(conn, household_id)
     if args.verb == "cancel-ritual":
         return cancel_ritual(conn, household_id)
+    if args.verb == "save-recipe":
+        try:
+            ingredients = json.loads(args.ingredients)
+            steps = json.loads(args.steps)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"invalid JSON in --ingredients or --steps: {exc}") from None
+        return save_recipe(conn, household_id, args.title, ingredients, steps,
+                           args.source_block, body_md=args.body_md, slug=args.slug)
     raise ValueError(f"unknown verb {args.verb}")
 
 

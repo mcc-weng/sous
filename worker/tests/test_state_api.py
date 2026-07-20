@@ -436,3 +436,97 @@ def test_cli_cancel_ritual(api_hid):
     assert proc.returncode == 0, proc.stderr
     out = json.loads(proc.stdout)
     assert out == {"ok": True, "cancelled": 1}
+
+
+def test_save_recipe_inserts_new(conn, api_hid):
+    ingredients = [{"name": "chicken thigh", "qty": "300g"}]
+    steps = [{"text": "Marinate the chicken", "duration_sec": 600},
+             {"text": "Pan-fry until golden", "duration_sec": 480,
+              "tip": "don't move it too early"}]
+    out = state_api.save_recipe(
+        conn, api_hid, title="三杯雞", slug="three-cup-chicken",
+        ingredients=ingredients, steps=steps,
+        source_block="原文食譜:雞腿肉 300g...", body_md="經典台菜",
+    )
+    assert out["ok"] is True
+    assert out["slug"] == "three-cup-chicken"
+    assert out["created"] is True
+    row = conn.execute(
+        "select title, source_block, body_md, ingredients, steps from recipes "
+        "where household_id = %s and slug = %s", (api_hid, "three-cup-chicken"),
+    ).fetchone()
+    assert row[0] == "三杯雞"
+    assert row[1] == "原文食譜:雞腿肉 300g..."
+    assert row[3] == ingredients
+    assert row[4] == steps
+
+
+def test_save_recipe_upserts_on_slug_conflict(conn, api_hid):
+    first = state_api.save_recipe(
+        conn, api_hid, title="三杯雞", slug="three-cup-chicken",
+        ingredients=[{"name": "chicken", "qty": "300g"}],
+        steps=[{"text": "cook it"}], source_block="v1",
+    )
+    second = state_api.save_recipe(
+        conn, api_hid, title="三杯雞(更新版)", slug="three-cup-chicken",
+        ingredients=[{"name": "chicken thigh", "qty": "400g"}],
+        steps=[{"text": "cook it better"}], source_block="v2",
+    )
+    assert first["id"] == second["id"]
+    assert first["created"] is True
+    assert second["created"] is False
+    rows = conn.execute(
+        "select title, source_block from recipes where household_id = %s and slug = %s",
+        (api_hid, "three-cup-chicken"),
+    ).fetchall()
+    assert len(rows) == 1
+    assert rows[0] == ("三杯雞(更新版)", "v2")
+
+
+def test_save_recipe_derives_slug_from_ascii_title(conn, api_hid):
+    out = state_api.save_recipe(
+        conn, api_hid, title="Garlic Fried Rice",
+        ingredients=[{"name": "rice", "qty": "2 cups"}],
+        steps=[{"text": "fry it"}], source_block="orig",
+    )
+    assert out["slug"] == "garlic-fried-rice"
+
+
+def test_save_recipe_requires_explicit_slug_for_non_latin_title(conn, api_hid):
+    with pytest.raises(ValueError, match="slug"):
+        state_api.save_recipe(
+            conn, api_hid, title="三杯雞",
+            ingredients=[{"name": "chicken"}], steps=[{"text": "cook"}],
+            source_block="orig",
+        )
+
+
+def test_save_recipe_validates_ingredient_and_step_shape(conn, api_hid):
+    with pytest.raises(ValueError, match="ingredients"):
+        state_api.save_recipe(conn, api_hid, title="x", slug="x",
+                              ingredients=[], steps=[{"text": "a"}], source_block="s")
+    with pytest.raises(ValueError, match="name"):
+        state_api.save_recipe(conn, api_hid, title="x", slug="x",
+                              ingredients=[{"qty": "1"}], steps=[{"text": "a"}],
+                              source_block="s")
+    with pytest.raises(ValueError, match="steps"):
+        state_api.save_recipe(conn, api_hid, title="x", slug="x",
+                              ingredients=[{"name": "a"}], steps=[], source_block="s")
+    with pytest.raises(ValueError, match="text"):
+        state_api.save_recipe(conn, api_hid, title="x", slug="x",
+                              ingredients=[{"name": "a"}], steps=[{"duration_sec": 1}],
+                              source_block="s")
+
+
+def test_cli_save_recipe(api_hid):
+    ingredients_json = json.dumps([{"name": "chicken", "qty": "300g"}])
+    steps_json = json.dumps([{"text": "cook it", "duration_sec": 300}])
+    proc = _run_cli(
+        ["save-recipe", "--title", "三杯雞", "--slug", "three-cup-chicken",
+         "--source-block", "orig text", "--ingredients", ingredients_json,
+         "--steps", steps_json],
+        api_hid,
+    )
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["ok"] is True and out["slug"] == "three-cup-chicken"
