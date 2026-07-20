@@ -47,6 +47,8 @@ def _fetch_caption(url: str) -> dict:
         )
     except subprocess.TimeoutExpired:
         return {"error": "caption fetch timed out"}
+    except OSError as exc:
+        return {"error": f"yt-dlp not available: {exc}"}
     if out.returncode != 0:
         return {"error": out.stderr.decode()[:300]}
     try:

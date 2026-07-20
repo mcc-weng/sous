@@ -72,3 +72,15 @@ def test_fetch_caption_handles_yt_dlp_failure(monkeypatch):
     monkeypatch.setattr(subprocess, "run", fake_run)
     out = gemini_intake._fetch_caption("https://youtu.be/abc123")
     assert "error" in out
+
+
+def test_fetch_caption_handles_missing_yt_dlp_binary(monkeypatch):
+    import subprocess
+
+    def fake_run(*a, **kw):
+        raise FileNotFoundError(2, "No such file or directory", "yt-dlp")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    out = gemini_intake._fetch_caption("https://youtu.be/abc123")
+    assert "error" in out
+    assert isinstance(out, dict)
