@@ -15,6 +15,8 @@ targets:
     dependencies:
       - package: Supabase
         product: Supabase
+      - target: SousShareExtension
+        embed: true
     entitlements:
       path: Sous/Sous.entitlements
       properties:
@@ -29,6 +31,36 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikeweng.sous
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 9D37X3YV25
+  SousShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - SousShareExtension
+      - path: Sous/Config.swift
+      - path: Sous/SupabaseClientFactory.swift
+    dependencies:
+      - package: Supabase
+        product: Supabase
+    entitlements:
+      path: SousShareExtension/SousShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.mikeweng.sous]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.mikeweng.sous.shared"]
+    info:
+      path: SousShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: 小當家
+        NSExtension:
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionPointIdentifier: com.apple.share-services
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikeweng.sous.SousShareExtension
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 9D37X3YV25
   SousTests:
