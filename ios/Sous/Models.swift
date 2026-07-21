@@ -123,3 +123,29 @@ struct Recipe: Codable, Identifiable, Equatable, Hashable {
         case createdAt = "created_at"
     }
 }
+
+struct CookSession: Codable, Identifiable, Equatable {
+    let id: UUID
+    let recipeId: UUID
+    let startedAt: Date
+    let completedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case recipeId = "recipe_id"
+        case startedAt = "started_at"
+        case completedAt = "completed_at"
+    }
+}
+
+struct Verdict: Codable, Identifiable, Equatable {
+    let id: UUID
+    let rating: String
+    let note: String?
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, rating, note
+        case createdAt = "created_at"
+    }
+}
