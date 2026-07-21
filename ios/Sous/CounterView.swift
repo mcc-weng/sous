@@ -5,6 +5,12 @@ struct CounterView: View {
     @State private var showWeekBoard = false
     @State private var showShoppingList = false
     @State private var showCookbook = false
+    @State private var showCookModeForTonight = false
+
+    private var tonightRecipe: Recipe? {
+        guard let dish = model.tonight?.dish else { return nil }
+        return model.recipes.first { $0.title == dish }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,6 +29,7 @@ struct CounterView: View {
         .sheet(isPresented: $showCookbook) {
             CookbookView().environmentObject(model)
         }
+        .task { await model.loadCookbook() }
     }
 
     private var chipRow: some View {
@@ -74,6 +81,14 @@ struct CounterView: View {
                 if let prep = model.tonight?.prepNote {
                     Text(prep).font(.caption).foregroundStyle(.secondary)
                 }
+            }
+            if let recipe = tonightRecipe {
+                Button("開始煮") { showCookModeForTonight = true }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.top, 4)
+                    .fullScreenCover(isPresented: $showCookModeForTonight) {
+                        CookModeView(recipe: recipe, planDay: model.tonight).environmentObject(model)
+                    }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
