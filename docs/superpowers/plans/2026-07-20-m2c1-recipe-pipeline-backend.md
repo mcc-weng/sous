@@ -1099,3 +1099,49 @@ git commit -m "feat(worker): google-genai dependency + gated recipe-intake smoke
   way again.
 - Everything under M2c2 (share extension, cookbook UI, cook mode) — separate plan, written
   after M2c1 is merged and cloud-verified, matching the M2a → M2b1 → M2b2 precedent.
+
+---
+
+## M2c1 cloud exit verification (2026-07-21, real polling daemon against cloud sandbox household)
+
+Unlike the earlier local smoke test (which called `main.process_one()` in-process) and
+the standalone script run (which called `gemini_intake`/`save-recipe` directly), this
+check ran the actual `sous_worker.main` daemon as its own background process, polling
+the real cloud `jobs` table every 3s, matching how the app uses it in production.
+
+Cloud deploy: no migration was pending for M2c1 (recipes/jobs schema already present
+from `0001_schema.sql`; M2c1 added no migration file). `worker/.env` was missing
+`GEMINI_API_KEY` (only `SOUS_DB_URL` was present) — copied from `~/Projects/alfred/.env`
+(same key alfred already uses). `SOUS_DB_URL` confirmed pointed at the cloud Session
+Pooler (`aws-0-ap-northeast-1.pooler.supabase.com:5432`); connection verified before
+starting the daemon.
+
+Driven via direct job insertion against the cloud sandbox household
+(`00000000-0000-0000-0000-000000000001`), bypassing RLS the same way M2b1's Task 10 did
+(no client exists yet to exercise the RLS-bound path — that's `jobs_write`'s tracked
+`recipe_intake` gap above, deferred to M2c2). Recipe URL: YouTube Shorts
+`https://www.youtube.com/watch?v=NbmT_9oH1SY` (紅燒牛肉麵), the same one verified working
+for Gemini video-understanding in the prior local session.
+
+**Result: PASS.** Job went `queued` → `running` → `done` in ~2m15s (19:35:08 →
+19:37:23 local), `result: {"mode": "recipe_intake", "reply_chars": 64}`. Verified
+against live cloud DB:
+- `recipes`: 紅燒牛肉麵, 9 steps (each with a `text` key, several with `tip`), 13
+  ingredients (each with `name`/`qty`), non-null `source_block` (157 chars, verbatim
+  capture). Row was an upsert onto the same slug as the prior standalone run
+  (`created_at` unchanged, no `updated_at` column exists) — expected behavior of
+  `save-recipe`'s upsert-by-slug design, not stale data.
+- `inbox_items`: fresh `kind='craving'` row ("想做紅燒牛肉麵"), timestamped inside the job's
+  run window — confirms `capture-inbox` was called this run, not left over.
+- `chat_messages`: fresh chef announcement ("紅燒牛肉麵補完整了!牛肉擦乾大火煎上色、同鍋爆香辛香料、紅蘿蔔抓最後15分鐘下鍋——這鍋一小時燉出的湯頭,已經排進下週候選了 🔥"),
+  timestamped inside the run window, in-persona (小當家 tone, 🔥), no hardcoded persona
+  name — the brain's own final turn after `save-recipe`+`capture-inbox` *is* the
+  announcement, as designed (no separate `post-card` verb needed).
+
+No test-data cleanup — this is real cookbook content for the sandbox household now,
+useful for M2c2's iOS work. Worker daemon left running against cloud afterward (needed
+for chat/ritual regardless of this check).
+
+M2c1 is now fully closed: implementation done, merged, and cloud-verified through the
+real production code path (not just tests/scripts). M2c2 (share-sheet intake, cookbook
+UI, cook mode) can proceed.
