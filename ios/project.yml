@@ -40,6 +40,7 @@ targets:
       - SousShareExtension
       - path: Sous/Config.swift
       - path: Sous/SupabaseClientFactory.swift
+      - path: Sous/ShareIntakeLogic.swift
     dependencies:
       - package: Supabase
         product: Supabase
