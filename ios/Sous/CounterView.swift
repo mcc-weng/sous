@@ -6,6 +6,8 @@ struct CounterView: View {
     @State private var showShoppingList = false
     @State private var showCookbook = false
     @State private var showCookModeForTonight = false
+    @State private var cookModeRecipe: Recipe?
+    @State private var cookModePlanDay: PlanDay?
 
     private var tonightRecipe: Recipe? {
         guard let dish = model.tonight?.dish else { return nil }
@@ -83,17 +85,23 @@ struct CounterView: View {
                 }
             }
             if let recipe = tonightRecipe {
-                Button("開始煮") { showCookModeForTonight = true }
-                    .buttonStyle(.borderedProminent)
-                    .padding(.top, 4)
-                    .fullScreenCover(isPresented: $showCookModeForTonight) {
-                        CookModeView(recipe: recipe, planDay: model.tonight).environmentObject(model)
-                    }
+                Button("開始煮") {
+                    cookModeRecipe = recipe
+                    cookModePlanDay = model.tonight
+                    showCookModeForTonight = true
+                }
+                .buttonStyle(.borderedProminent)
+                .padding(.top, 4)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .padding()
+        .fullScreenCover(isPresented: $showCookModeForTonight) {
+            if let cookModeRecipe, let cookModePlanDay {
+                CookModeView(recipe: cookModeRecipe, planDay: cookModePlanDay).environmentObject(model)
+            }
+        }
     }
 }
