@@ -512,8 +512,14 @@ struct CookModeView: View {
         VStack(spacing: 16) {
             Text("這頓煮得怎麼樣?").font(.title2.bold())
             ForEach(["神作", "不錯", "普通", "翻車"], id: \.self) { option in
-                Button(option) { rating = option }
-                    .buttonStyle(rating == option ? .borderedProminent : .bordered)
+                // A ternary can't unify two different ButtonStyle-conforming
+                // concrete types (.borderedProminent vs .bordered), so the whole
+                // Button branches instead of just the style argument.
+                if rating == option {
+                    Button(option) { rating = option }.buttonStyle(.borderedProminent)
+                } else {
+                    Button(option) { rating = option }.buttonStyle(.bordered)
+                }
             }
             TextField("備註(選填)", text: $note)
                 .textFieldStyle(.roundedBorder)
