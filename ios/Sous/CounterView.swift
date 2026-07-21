@@ -4,6 +4,7 @@ struct CounterView: View {
     @EnvironmentObject private var model: AppModel
     @State private var showWeekBoard = false
     @State private var showShoppingList = false
+    @State private var showCookbook = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,6 +20,9 @@ struct CounterView: View {
         .sheet(isPresented: $showShoppingList) {
             ShoppingListView().environmentObject(model)
         }
+        .sheet(isPresented: $showCookbook) {
+            CookbookView().environmentObject(model)
+        }
     }
 
     private var chipRow: some View {
@@ -32,6 +36,11 @@ struct CounterView: View {
                 showShoppingList = true
             } label: {
                 Label("買菜 \(uncheckedCount(model.shoppingItems))", systemImage: "cart")
+            }
+            Button {
+                showCookbook = true
+            } label: {
+                Label("食譜本", systemImage: "book.closed")
             }
         }
         .buttonStyle(.bordered)

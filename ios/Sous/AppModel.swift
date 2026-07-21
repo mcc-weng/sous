@@ -17,6 +17,7 @@ final class AppModel: ObservableObject {
     @Published var nextWeek: PlanWeek?
     @Published var nextWeekDays: [PlanDay] = []
     @Published var shoppingItems: [ShoppingItem] = []
+    @Published var recipes: [Recipe] = []
 
     // MARK: auth
 
@@ -118,6 +119,15 @@ final class AppModel: ObservableObject {
                 .order("name")
                 .execute().value
         } catch { print("shopping items load: \(error)") }
+    }
+
+    func loadCookbook() async {
+        do {
+            recipes = try await client.from("recipes")
+                .select("id,slug,title,source_block,body_md,ingredients,steps,created_at")
+                .order("created_at", ascending: false)
+                .execute().value
+        } catch { print("cookbook load: \(error)") }
     }
 
     // MARK: write path — chat message + job (spec §3 step 1)
