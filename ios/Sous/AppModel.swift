@@ -3,10 +3,7 @@ import Supabase
 
 @MainActor
 final class AppModel: ObservableObject {
-    let client = SupabaseClient(
-        supabaseURL: Config.supabaseURL,
-        supabaseKey: Config.supabaseAnonKey
-    )
+    let client = SupabaseClientFactory.make()
 
     @Published var session: Session?
     @Published var household: Household?
@@ -52,6 +49,9 @@ final class AppModel: ObservableObject {
             let rows: [Household] = try await client.from("households")
                 .select("id,name,worker_seen_at,timezone").execute().value
             household = rows.first
+            if let id = household?.id {
+                UserDefaults(suiteName: "group.com.mikeweng.sous")?.set(id.uuidString, forKey: "household_id")
+            }
         } catch { print("household load: \(error)") }
     }
 
