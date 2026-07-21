@@ -1015,11 +1015,23 @@ In `ios/Sous/Sous.entitlements`, add the two new keys (keep the existing
 - [ ] **Step 4: Update project.yml's entitlement properties to match**
 
 In `ios/project.yml`, the `Sous` target's `entitlements.properties` currently only
-lists `com.apple.developer.applesignin`. XcodeGen merges `properties` into whatever the
-`path`-referenced file already has, so since Step 3 already added the new keys
-directly to the physical file, no `project.yml` change is required for this target —
-confirm this by re-reading the generated entitlements after `xcodegen generate` in
-Step 5 (below) rather than duplicating the keys in both places.
+lists `com.apple.developer.applesignin`. **Corrected during implementation:** XcodeGen
+does NOT merge `properties` into the `path`-referenced file — `xcodegen generate`
+regenerates the entitlements file from `properties` and overwrites it, silently
+dropping any keys added directly to the physical file that aren't also listed in
+`project.yml` (confirmed by direct testing against the installed XcodeGen 2.44.1;
+reproduced twice). So Step 3's physical-file edit is not sufficient on its own — add
+the same two keys to the `Sous` target's `entitlements.properties` in `project.yml`
+too:
+
+```yaml
+    entitlements:
+      path: Sous/Sous.entitlements
+      properties:
+        com.apple.developer.applesignin: [Default]
+        com.apple.security.application-groups: [group.com.mikeweng.sous]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.mikeweng.sous.shared"]
+```
 
 - [ ] **Step 5: Build and manually verify re-auth**
 
@@ -1055,6 +1067,17 @@ git commit -m "feat(ios): shared Keychain access group + App Group for share ext
 
 - [ ] **Step 1: Add the target to project.yml**
 
+**Important, confirmed against XcodeGen's actual source (`FileWriter.swift`):**
+`xcodegen generate` does NOT merge a target's `entitlements`/`info` `path`-referenced
+file with anything — it unconditionally *writes* `properties` (for `info`, merged with
+XcodeGen's own generated defaults for the target type; for `entitlements`, `properties`
+alone, defaulting to `{}` if omitted) to `path`, overwriting whatever's physically
+there. Omitting `properties` entirely — as an earlier draft of this step did — would
+silently wipe both files to near-empty on every `xcodegen generate`, deleting the
+`NSExtension` activation config and the App Group/Keychain entitlements. Both blocks
+below MUST include a `properties:` key mirroring the physical files written in Steps 2
+and 3, exactly like the `Sous` target already does for its own `entitlements`.
+
 In `ios/project.yml`, add a new target under `targets:` (alongside `Sous` and
 `SousTests`):
 
@@ -1071,8 +1094,19 @@ In `ios/project.yml`, add a new target under `targets:` (alongside `Sous` and
         product: Supabase
     entitlements:
       path: SousShareExtension/SousShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.mikeweng.sous]
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.mikeweng.sous.shared"]
     info:
       path: SousShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: 小當家
+        NSExtension:
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionPointIdentifier: com.apple.share-services
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikeweng.sous.SousShareExtension
