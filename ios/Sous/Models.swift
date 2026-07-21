@@ -88,3 +88,38 @@ func chefIsPresent(workerSeenAt: Date?, now: Date = Date(),
     guard let seen = workerSeenAt else { return false }
     return now.timeIntervalSince(seen) < threshold
 }
+
+struct Ingredient: Codable, Equatable, Hashable {
+    let name: String
+    let qty: String?
+}
+
+struct RecipeStep: Codable, Equatable, Hashable {
+    let text: String
+    let stage: String?
+    let durationSec: Int?
+    let tip: String?
+
+    enum CodingKeys: String, CodingKey {
+        case text, stage, tip
+        case durationSec = "duration_sec"
+    }
+}
+
+struct Recipe: Codable, Identifiable, Equatable, Hashable {
+    let id: UUID
+    let slug: String
+    let title: String
+    let sourceBlock: String?
+    let bodyMd: String
+    let ingredients: [Ingredient]
+    let steps: [RecipeStep]
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, slug, title, ingredients, steps
+        case sourceBlock = "source_block"
+        case bodyMd = "body_md"
+        case createdAt = "created_at"
+    }
+}
