@@ -548,10 +548,11 @@ struct CookModeView: View {
     /// the shopping checkbox's precedent of never gating a mechanical action on a
     /// network round-trip.
     private func startSession() async {
-        struct NewSession: Encodable { let recipe_id: UUID }
+        struct NewSession: Encodable { let household_id: UUID; let recipe_id: UUID }
+        guard let household = model.household else { return }
         do {
             let inserted: CookSession = try await model.client.from("cook_sessions")
-                .insert(NewSession(recipe_id: recipe.id))
+                .insert(NewSession(household_id: household.id, recipe_id: recipe.id))
                 .select("id,recipe_id,started_at,completed_at").single().execute().value
             sessionId = inserted.id
         } catch { print("start cook session: \(error)") }
