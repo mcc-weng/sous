@@ -3,6 +3,12 @@
 Prompt is piped via STDIN — `--allowedTools` is variadic and would swallow a
 trailing prompt argument (alfred spike, 2026-06-07). Write verbs arrive via
 the state_api Bash allowlist entry in `allowed_tools`, not a hardcoded tool.
+
+`--safe-mode` disables globally-installed plugin/hook customizations for this
+call only (auth, model selection, and built-in tools are unaffected) — without
+it, a machine-wide plugin hook unconditionally blocks the WebFetch tool for
+every headless `claude -p` invocation, breaking recipe_intake's documented
+WebFetch fallback. See project memory `worker-worktree-network-fetch-blocked`.
 """
 import os
 import subprocess
@@ -21,7 +27,8 @@ def run_brain(prompt: str, model: str = "sonnet", timeout: int = 480,
     env = None if extra_env is None else {**os.environ, **extra_env}
     try:
         result = subprocess.run(
-            [_claude_bin(), "-p", "--model", model, "--allowedTools", *allowed_tools],
+            [_claude_bin(), "-p", "--model", model, "--safe-mode",
+             "--allowedTools", *allowed_tools],
             input=prompt.encode(),
             capture_output=True,
             timeout=timeout,

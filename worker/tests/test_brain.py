@@ -50,3 +50,15 @@ def test_run_brain_passes_tools_env_and_cwd(tmp_path, monkeypatch):
     assert "Bash(.venv/bin/python state_api.py:*)" in out
     assert "HID=h-1" in out
     assert f"PWD={tmp_path.resolve()}" in out
+
+
+def test_run_brain_passes_safe_mode(fake_claude):
+    """--safe-mode disables global plugin/hook customizations (e.g. context-mode's
+    unconditional WebFetch block) for the brain's headless call, without touching
+    OAuth/keychain subscription auth — see worker-worktree-network-fetch-blocked
+    project memory. Must not regress silently if the flag is ever dropped."""
+    script = fake_claude
+    script.write_text('#!/bin/sh\necho "ARGS=$*"\n')
+    script.chmod(script.stat().st_mode | 0o111)
+    out = brain.run_brain("hi")
+    assert "--safe-mode" in out
