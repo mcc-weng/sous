@@ -25,7 +25,8 @@ below).
 `worker/prompts/` for an existing fixed dinner-time assumption to reuse — none exists,
 so this phase introduces the first one): morning nudge 07:30; ritual prompt Sunday
 17:00; prep reminder 15:00 (2h before the 17:00 dinner-prep default); verdict-action
-sweep considers a `cook_session` eligible 1h after `completed_at` with no matching
+sweep considers a `plan_days` row eligible once household-local time passes that date's
+21:00 (17:00 dinner-prep default + ~4h buffer for eating/cleanup) with no matching
 `verdicts` row.
 
 ## Starting state (verified against the codebase, not assumed)
@@ -74,10 +75,15 @@ notifications unaffected"*).
   - **Ritual prompt** — doesn't need the brain. It's a fixed weekly beat ("time to plan
     the week"), not state-dependent content. `pg_cron` inserts the `notifications` row
     directly via SQL using static `copy_pack` text, on a fixed weekly schedule.
-  - **Verdict actions** — `pg_cron` sweeps `cook_sessions` every ~15 min for sessions
-    completed with no matching `verdicts` row after a delay, and inserts a
-    `notif_generate` job per hit (mentions the dish by name, so it goes through the
-    brain).
+  - **Verdict actions** — `pg_cron` sweeps `plan_days` every ~15 min for rows whose date
+    has passed 21:00 household-local with `status != 'skipped'` and no matching
+    `verdicts` row, and inserts a `notif_generate` job per hit (mentions the dish by
+    name, so it goes through the brain). Sweeping `plan_days` rather than `cook_sessions`
+    is deliberate: `cook_sessions` has no FK to `plan_days` or `verdicts` (checked all six
+    migrations — no join path exists), while `verdicts` already carries `plan_day_id`
+    directly (`ios/Sous/CookModeView.swift` submits it from the view's `planDay` context).
+    Sweeping `plan_days` also catches "never opened cook mode at all," not just "opened
+    it but skipped the verdict."
 
 **Stage 2 — Delivery.** Cloud-only, laptop-independent.
 
@@ -98,13 +104,13 @@ New migration (`0007_...sql`, following the existing numbered pattern):
 - `notifications`: add `kind text not null` (`morning_nudge` / `prep_reminder` /
   `ritual_prompt` / `verdict_action`), `sent_at timestamptz`, `error text`, and
   `source_id uuid` (nullable — the `plan_days.id` driving a `morning_nudge`/
-  `prep_reminder`, or the `cook_sessions.id` driving a `verdict_action`; null for
-  `ritual_prompt`, which has no per-instance source row). Add a dedupe index:
+  `prep_reminder`/`verdict_action`; null for `ritual_prompt`, which has no per-instance
+  source row). Add a dedupe index:
   `unique (household_id, kind, source_id) where source_id is not null` so a retried
   `notif_generate` job can't double-schedule a notification for the same underlying
-  event. Deliberately **not** keyed on `send_at::date` — a household can have two
-  `verdict_action`-eligible `cook_sessions` on the same day (e.g. lunch and dinner), and
-  a date-keyed dedupe would silently drop the second one.
+  event. Deliberately **not** keyed on `send_at::date` — a household can have both a
+  `morning_nudge` and a same-day `verdict_action` (from yesterday's dinner, swept this
+  morning) sharing a date, and a date-keyed dedupe conflates unrelated notifications.
 - `jobs_write` RLS policy: add `notif_generate` to the allowed `kind` list. Inserts will
   actually come from the worker/`pg_cron` (service-role, bypasses RLS), so this isn't
   strictly required today — but `0005_jobs_allow_ritual_kind.sql` and
@@ -163,4 +169,4 @@ New migration (`0007_...sql`, following the existing numbered pattern):
   insert a `notifications` row with `send_at = now()` via `psql` and confirm delivery to
   a real device within ~1 min of the cron tick. Separately confirm each real trigger path
   at least once: a real ritual lock produces the week's batch of `notif_generate` jobs,
-  and a completed `cook_session` without a verdict gets picked up by the sweep.
+  and a past `plan_days` row without a verdict gets picked up by the sweep.
