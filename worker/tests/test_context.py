@@ -18,8 +18,9 @@ MONDAY = context.week_monday(datetime.datetime.now(ZoneInfo("Australia/Sydney"))
 @pytest.fixture
 def api_hid(conn):
     """Dedicated household so notif_verdict context tests never disturb the seeded
-    sandbox. Mirrors tests/test_state_api.py's api_hid fixture (not shared via
-    conftest.py — duplicated locally to keep this file's changes self-contained)."""
+    sandbox. Simplified from tests/test_state_api.py's api_hid fixture (single
+    plan_day, not two — this file only needs one dish) and not shared via
+    conftest.py — duplicated locally to keep this task's changes self-contained."""
     hid = conn.execute(
         "insert into households (name, persona_id) "
         "select 'notif-verdict-test', id from personas limit 1 returning id::text"
