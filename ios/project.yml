@@ -23,6 +23,7 @@ targets:
         com.apple.developer.applesignin: [Default]
         com.apple.security.application-groups: [group.com.mikeweng.sous]
         keychain-access-groups: ["$(AppIdentifierPrefix)com.mikeweng.sous.shared"]
+        aps-environment: development
     info:
       path: Sous/Info.plist
       properties:

@@ -5,6 +5,7 @@ struct CounterView: View {
     @State private var showWeekBoard = false
     @State private var showShoppingList = false
     @State private var showCookbook = false
+    @State private var showNotificationsSettings = false
     @State private var showCookModeForTonight = false
     @State private var cookModeRecipe: Recipe?
     @State private var cookModePlanDay: PlanDay?
@@ -31,6 +32,9 @@ struct CounterView: View {
         .sheet(isPresented: $showCookbook) {
             CookbookView().environmentObject(model)
         }
+        .sheet(isPresented: $showNotificationsSettings) {
+            NotificationsSettingsView().environmentObject(model)
+        }
         .task { await model.loadCookbook() }
     }
 
@@ -50,6 +54,11 @@ struct CounterView: View {
                 showCookbook = true
             } label: {
                 Label("食譜本", systemImage: "book.closed")
+            }
+            Button {
+                showNotificationsSettings = true
+            } label: {
+                Label("通知", systemImage: "bell")
             }
         }
         .buttonStyle(.bordered)
