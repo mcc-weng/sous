@@ -1227,6 +1227,14 @@ select vault.create_secret('<anon key from supabase status>', 'publishable_key')
 -- Supabase's documented pattern (docs/guides/functions/schedule-functions) exactly —
 -- project_url and publishable_key must already exist in Vault (see above) or every
 -- tick's net.http_post silently no-ops (its errors don't surface anywhere).
+--
+-- CORRECTED 2026-07-25 during the manual delivery spike (see migration 0010): the
+-- `apikey`-only header shown here (byte-for-byte from Supabase's own docs example)
+-- returned 401 UNAUTHORIZED_NO_AUTH_HEADER on every tick against this project's
+-- function gateway — confirmed live via `net._http_response`. An `Authorization:
+-- Bearer <publishable_key>` header is also required. If you're implementing this
+-- fresh, write both headers from the start (see 0010) rather than reproducing this
+-- bug and rediscovering the fix.
 select cron.schedule(
   'delivery-tick',
   '* * * * *',
@@ -1236,7 +1244,8 @@ select cron.schedule(
              || '/functions/v1/deliver-notifications',
       headers := jsonb_build_object(
         'Content-type', 'application/json',
-        'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
+        'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key'),
+        'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
       ),
       body := '{}'::jsonb
   ) as request_id;
