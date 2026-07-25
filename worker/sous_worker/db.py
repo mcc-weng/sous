@@ -142,3 +142,39 @@ def get_proposing_week(conn, household_id: str) -> dict | None:
         (household_id,),
     ).fetchone()
     return {"id": row[0], "week_of": row[1]} if row else None
+
+
+def enqueue_week_notifications_if_locked(conn, household_id: str, week_of) -> bool:
+    """Best-effort side effect of a ritual turn completing (called from main.py,
+    outside the job's own success/failure contract — a failure here must never mark
+    an already-`done` job as failed). Idempotent under ritual job retries: a
+    notif_generate job already queued/running/done for the same week_id blocks a
+    duplicate insert.
+
+    `week_of` must be the specific week THIS ritual turn targeted (main.py computes
+    it the same way context.fetch_ritual_context does) — not "whichever week happens
+    to be locked." A household's current week is locked from the moment it's planned
+    and stays locked indefinitely, so querying "the latest locked week" unconditionally
+    would fire this on every ritual-mode turn, not just ones that just completed a
+    lock (caught via a real test failure: SANDBOX's seeded current week is always
+    locked, so the unconditional version enqueued a spurious job on every ritual-mode
+    job, including ones that never locked anything new)."""
+    row = conn.execute(
+        "select id::text from plan_weeks where household_id=%s and week_of=%s "
+        "and status='locked'", (household_id, week_of),
+    ).fetchone()
+    if row is None:
+        return False
+    week_id = row[0]
+    exists = conn.execute(
+        "select 1 from jobs where household_id=%s and kind='notif_generate' "
+        "and payload->>'notif_kind'='week_batch' and payload->>'week_id'=%s",
+        (household_id, week_id),
+    ).fetchone()
+    if exists:
+        return False
+    conn.execute(
+        "insert into jobs (household_id, kind, payload) values (%s, 'notif_generate', %s)",
+        (household_id, Jsonb({"notif_kind": "week_batch", "week_id": week_id})),
+    )
+    return True

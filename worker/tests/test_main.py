@@ -244,3 +244,124 @@ def test_recipe_intake_job_runs_prefetch_and_wires_prompt(conn, monkeypatch):
     assert content == "存好了!🔥 三杯雞排進下週候選了" and job_id == jid
     result = conn.execute("select result from jobs where id=%s", (jid,)).fetchone()[0]
     assert result["mode"] == "recipe_intake"
+
+
+def _fake_run_brain_locks_week(conn):
+    """A fake run_brain that locks the target week as its side effect, standing in
+    for what a real brain turn's `state_api.py set-plan` subprocess call would have
+    done. Must run AFTER ensure_proposing_week has created the 'proposing' row —
+    generate_ritual_reply calls that before invoking run_brain, so by the time this
+    fake fires (inside process_one, via run_brain) the row already exists."""
+    def fake(prompt, **kw):
+        conn.execute(
+            "update plan_weeks set status='locked' "
+            "where household_id=%s and status='proposing'", (SANDBOX,),
+        )
+        return "好,這週排好了!"
+    return fake
+
+
+def test_ritual_lock_enqueues_week_batch_notif_job(conn, monkeypatch):
+    monkeypatch.setattr(main.brain, "run_brain", _fake_run_brain_locks_week(conn))
+    _insert_ritual_job(conn)
+    assert main.process_one(conn, main.load_config()) is True
+
+    # order by week_of desc: the seeded SANDBOX household already has a locked
+    # *current* week from supabase/seed.sql — the newly-locked *next* week sorts
+    # after it, so this reliably picks the one this test just created.
+    week_row = conn.execute(
+        "select id::text from plan_weeks where household_id=%s and status='locked' "
+        "order by week_of desc limit 1", (SANDBOX,),
+    ).fetchone()
+    assert week_row is not None
+    try:
+        job = conn.execute(
+            "select payload from jobs where household_id=%s and kind='notif_generate' "
+            "order by created_at desc limit 1", (SANDBOX,),
+        ).fetchone()
+        assert job is not None
+        assert job[0] == {"notif_kind": "week_batch", "week_id": week_row[0]}
+    finally:
+        # Must clean up: plan_weeks isn't truncated between tests (unlike jobs/
+        # chat_messages), and this row would otherwise collide with any later test
+        # that also targets "next week" for SANDBOX (e.g. test_state_api.py's
+        # test_cancel_ritual_scopes_to_household — caught via a real cross-test
+        # failure when this cleanup was missing).
+        conn.execute("delete from plan_weeks where id=%s", (week_row[0],))
+
+
+def test_ritual_lock_enqueue_is_idempotent_on_retry(conn, monkeypatch):
+    monkeypatch.setattr(main.brain, "run_brain", _fake_run_brain_locks_week(conn))
+    _insert_ritual_job(conn)
+    assert main.process_one(conn, main.load_config()) is True
+    week_row = conn.execute(
+        "select id::text from plan_weeks where household_id=%s and status='locked' "
+        "order by week_of desc limit 1", (SANDBOX,),
+    ).fetchone()
+    try:
+        # A second ritual-kind job arrives for the same already-locked week (e.g. a
+        # retried turn, or the user re-entering ritual chat after it's already locked).
+        # generate_ritual_reply's ensure_proposing_week is a no-op here since the week
+        # is already 'locked', not 'proposing' — so the fake run_brain's own UPDATE
+        # matches zero rows the second time, which is fine, it's idempotent too.
+        _insert_ritual_job(conn)
+        assert main.process_one(conn, main.load_config()) is True
+
+        count = conn.execute(
+            "select count(*) from jobs where household_id=%s and kind='notif_generate' "
+            "and payload->>'week_id'=%s", (SANDBOX, week_row[0]),
+        ).fetchone()[0]
+        assert count == 1
+    finally:
+        conn.execute("delete from plan_weeks where id=%s", (week_row[0],))
+
+
+def _insert_notif_week_job(conn, week_id: str):
+    return conn.execute(
+        "insert into jobs (household_id, kind, payload) "
+        "values (%s, 'notif_generate', %s) returning id::text",
+        (SANDBOX, Jsonb({"notif_kind": "week_batch", "week_id": week_id})),
+    ).fetchone()[0]
+
+
+def test_notif_generate_failure_skips_apology_message(conn, monkeypatch):
+    # _apologize's in-character "可惡…廚房出了點狀況!" message is meant for
+    # user-initiated actions (chat/ritual/recipe_intake) that visibly failed — a
+    # notif_generate job is a background side effect the user never asked for in
+    # this turn, so its failure must not inject a spurious chat message.
+    def broken_brain(*a, **kw):
+        raise RuntimeError("boom")
+    monkeypatch.setattr(main.brain, "run_brain", broken_brain)
+    week_id = conn.execute(
+        "select id::text from plan_weeks where household_id=%s and status='locked' "
+        "order by week_of desc limit 1", (SANDBOX,),
+    ).fetchone()[0]
+    _insert_notif_week_job(conn, week_id)
+    cfg = main.load_config() | {"max_attempts": 1}
+    main.process_one(conn, cfg)
+    apology_count = conn.execute(
+        "select count(*) from chat_messages where sender='chef' and content like '%可惡%'"
+    ).fetchone()[0]
+    assert apology_count == 0
+
+
+def test_notif_generate_week_batch_uses_notif_week_prompt(conn, monkeypatch):
+    seen = {}
+    def fake_run_brain(prompt, **kw):
+        seen["prompt"] = prompt
+        return "已排定這週的通知"
+    monkeypatch.setattr(main.brain, "run_brain", fake_run_brain)
+    week_id = conn.execute(
+        "select id::text from plan_weeks where household_id=%s and status='locked' "
+        "order by week_of desc limit 1", (SANDBOX,),
+    ).fetchone()[0]
+    jid = _insert_notif_week_job(conn, week_id)
+    assert main.process_one(conn, main.load_config()) is True
+    assert "schedule-notification" in seen["prompt"]
+    # no chat_messages row — notif_generate is not a user-facing reply
+    linked = conn.execute(
+        "select count(*) from chat_messages where job_id=%s", (jid,)
+    ).fetchone()[0]
+    assert linked == 0
+    result = conn.execute("select result from jobs where id=%s", (jid,)).fetchone()[0]
+    assert result["mode"] == "notif_generate"

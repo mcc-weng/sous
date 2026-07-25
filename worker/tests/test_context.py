@@ -238,3 +238,32 @@ def test_build_recipe_intake_prompt_substitutes_everything(conn):
     assert "mike" in prompt
     assert "食譜內容" in prompt
     assert "{" not in prompt.replace("{}", "")
+
+
+def test_fetch_notif_week_context_includes_day_ids(conn):
+    week_id = conn.execute(
+        "select w.id::text from plan_weeks w "
+        "where w.household_id=%s and w.status='locked' order by w.week_of desc limit 1",
+        (SANDBOX,),
+    ).fetchone()[0]
+    ctx = context.fetch_notif_week_context(conn, SANDBOX, week_id)
+    assert ctx["household"]["name"] == "sandbox"
+    assert len(ctx["days"]) >= 1
+    first = ctx["days"][0]
+    assert set(first) == {"id", "date", "dish", "mode", "prep_note"}
+
+
+def test_build_notif_week_prompt_substitutes_placeholders(conn):
+    # Inline template, not a read of the real prompts/notif_week.md file — matches
+    # this file's existing convention (see test_build_ritual_prompt_substitutes_everything
+    # above), which keeps context-building tests independent of prompt copy changes.
+    template = "{persona_pack}\n{today}\n{weekday}\n{days}"
+    week_id = conn.execute(
+        "select w.id::text from plan_weeks w "
+        "where w.household_id=%s and w.status='locked' order by w.week_of desc limit 1",
+        (SANDBOX,),
+    ).fetchone()[0]
+    ctx = context.fetch_notif_week_context(conn, SANDBOX, week_id)
+    prompt = context.build_notif_week_prompt(template, ctx)
+    assert "{" not in prompt.replace("{}", "")
+    assert ctx["days"][0]["dish"] in prompt
