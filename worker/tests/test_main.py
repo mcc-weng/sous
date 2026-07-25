@@ -298,6 +298,7 @@ def test_ritual_lock_enqueue_is_idempotent_on_retry(conn, monkeypatch):
         "select id::text from plan_weeks where household_id=%s and status='locked' "
         "order by week_of desc limit 1", (SANDBOX,),
     ).fetchone()
+    assert week_row is not None
     try:
         # A second ritual-kind job arrives for the same already-locked week (e.g. a
         # retried turn, or the user re-entering ritual chat after it's already locked).
