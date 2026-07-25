@@ -1,6 +1,6 @@
 // supabase/functions/deliver-notifications/apns.test.ts
 import { assertEquals, assertExists } from "https://deno.land/std@0.224.0/testing/asserts.ts";
-import { base64url, buildProviderJWT, buildApnsPayload, importP8Key } from "./apns.ts";
+import { base64url, buildProviderJWT, buildApnsPayload, importP8Key, shouldDeleteToken } from "./apns.ts";
 
 // A real EC P-256 PKCS8 test key, generated solely for this test file (not a
 // production credential) via: openssl ecparam -genkey -name prime256v1 -noout |
@@ -35,4 +35,25 @@ Deno.test("buildApnsPayload shapes the alert payload", () => {
     aps: { alert: { title: "早安!", body: "今天煮咖哩飯" }, sound: "default" },
     deeplink: "sous://plan/2026-07-27",
   });
+});
+
+Deno.test("shouldDeleteToken always deletes on 410, regardless of reason", () => {
+  assertEquals(shouldDeleteToken(410, undefined), true);
+  assertEquals(shouldDeleteToken(410, "Unregistered"), true);
+});
+
+Deno.test("shouldDeleteToken deletes on 400 only when reason is BadDeviceToken", () => {
+  assertEquals(shouldDeleteToken(400, "BadDeviceToken"), true);
+});
+
+Deno.test("shouldDeleteToken keeps the token on other 400 reasons", () => {
+  assertEquals(shouldDeleteToken(400, "BadTopic"), false);
+  assertEquals(shouldDeleteToken(400, "PayloadEmpty"), false);
+  assertEquals(shouldDeleteToken(400, "BadExpirationDate"), false);
+  assertEquals(shouldDeleteToken(400, undefined), false);
+});
+
+Deno.test("shouldDeleteToken keeps the token on unrelated status codes", () => {
+  assertEquals(shouldDeleteToken(500, "InternalServerError"), false);
+  assertEquals(shouldDeleteToken(403, "ExpiredProviderToken"), false);
 });

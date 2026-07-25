@@ -43,6 +43,15 @@ export function buildApnsPayload(title: string, body: string, deeplink: string |
   };
 }
 
+// APNs 410 (Unregistered) always means the token itself is dead. APNs 400 is shared by
+// many unrelated errors (BadTopic, PayloadEmpty, BadExpirationDate, ...); only the
+// "BadDeviceToken" reason means the token is invalid. Deleting on any 400 regardless of
+// reason would silently wipe out an entire household's valid tokens the moment something
+// else is misconfigured (e.g. a wrong APNS_BUNDLE_ID makes every send 400 BadTopic).
+export function shouldDeleteToken(status: number, reason?: string): boolean {
+  return status === 410 || (status === 400 && reason === "BadDeviceToken");
+}
+
 export async function sendPush(deviceToken: string, jwt: string, bundleId: string,
                                payload: unknown, sandbox: boolean): Promise<Response> {
   const host = sandbox ? "api.sandbox.push.apple.com" : "api.push.apple.com";

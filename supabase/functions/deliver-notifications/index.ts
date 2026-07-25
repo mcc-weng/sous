@@ -1,6 +1,6 @@
 // supabase/functions/deliver-notifications/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildApnsPayload, buildProviderJWT, importP8Key, sendPush } from "./apns.ts";
+import { buildApnsPayload, buildProviderJWT, importP8Key, sendPush, shouldDeleteToken } from "./apns.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -60,9 +60,18 @@ Deno.serve(async () => {
       if (res.ok) {
         anySucceeded = true;
       } else {
-        const body = await res.text();
-        lastError = `${res.status}: ${body}`;
-        if (res.status === 410 || res.status === 400) {
+        // APNs error bodies are JSON shaped like {"reason": "BadDeviceToken"}; a non-JSON
+        // body (or an unexpected shape) just leaves `reason` undefined, which
+        // shouldDeleteToken treats as "don't delete" for any status other than 410.
+        const bodyText = await res.text();
+        let reason: string | undefined;
+        try {
+          reason = JSON.parse(bodyText)?.reason;
+        } catch {
+          // non-JSON body; reason stays undefined
+        }
+        lastError = `${res.status}: ${bodyText}`;
+        if (shouldDeleteToken(res.status, reason)) {
           await supabase.from("device_tokens").delete().eq("token", token);
         }
       }
