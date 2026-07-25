@@ -105,6 +105,10 @@ def generate_notif_reply(conn, job: db.Job, cfg: dict) -> str:
         ctx = context.fetch_notif_week_context(conn, job.household_id, job.payload["week_id"])
         template = (ROOT / "prompts" / "notif_week.md").read_text()
         prompt = context.build_notif_week_prompt(template, ctx)
+    elif notif_kind == "verdict_action":
+        ctx = context.fetch_notif_verdict_context(conn, job.household_id, job.payload["plan_day_id"])
+        template = (ROOT / "prompts" / "notif_verdict.md").read_text()
+        prompt = context.build_notif_verdict_prompt(template, ctx)
     else:
         raise ValueError(f"unknown notif_kind: {notif_kind}")
     return brain.run_brain(prompt, model=cfg["chat_model"],

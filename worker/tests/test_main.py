@@ -366,3 +366,42 @@ def test_notif_generate_week_batch_uses_notif_week_prompt(conn, monkeypatch):
     assert linked == 0
     result = conn.execute("select result from jobs where id=%s", (jid,)).fetchone()[0]
     assert result["mode"] == "notif_generate"
+
+
+def _insert_notif_verdict_job(conn, plan_day_id: str):
+    return conn.execute(
+        "insert into jobs (household_id, kind, payload) "
+        "values (%s, 'notif_generate', %s) returning id::text",
+        (SANDBOX, Jsonb({"notif_kind": "verdict_action", "plan_day_id": plan_day_id})),
+    ).fetchone()[0]
+
+
+def test_notif_generate_verdict_action_uses_notif_verdict_prompt(conn, monkeypatch):
+    day_id = conn.execute(
+        "select id::text from plan_days where household_id=%s order by date limit 1",
+        (SANDBOX,),
+    ).fetchone()[0]
+    seen = {}
+    def fake_run_brain(prompt, **kw):
+        seen["prompt"] = prompt
+        return "已排定回訪通知"
+    monkeypatch.setattr(main.brain, "run_brain", fake_run_brain)
+    jid = _insert_notif_verdict_job(conn, day_id)
+    assert main.process_one(conn, main.load_config()) is True
+    assert "verdict_action" in seen["prompt"]
+    result = conn.execute("select result from jobs where id=%s", (jid,)).fetchone()[0]
+    assert result["mode"] == "notif_generate"
+
+
+def test_notif_generate_unknown_notif_kind_fails_cleanly(conn):
+    jid = conn.execute(
+        "insert into jobs (household_id, kind, payload) values (%s, 'notif_generate', %s) "
+        "returning id::text",
+        (SANDBOX, Jsonb({"notif_kind": "bogus"})),
+    ).fetchone()[0]
+    cfg = main.load_config() | {"max_attempts": 1}
+    main.process_one(conn, cfg)
+    status, result = conn.execute(
+        "select status, result from jobs where id=%s", (jid,)
+    ).fetchone()
+    assert status == "failed" and "unknown notif_kind" in result["error"]

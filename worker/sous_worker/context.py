@@ -78,6 +78,35 @@ def build_notif_week_prompt(template: str, ctx: dict) -> str:
     )
 
 
+def fetch_notif_verdict_context(conn, household_id: str, plan_day_id: str,
+                                now: datetime.datetime | None = None) -> dict:
+    household = db.get_household(conn, household_id)
+    if now is None:
+        now = datetime.datetime.now(ZoneInfo(household["timezone"]))
+    row = conn.execute(
+        "select date, dish from plan_days where id = %s and household_id = %s",
+        (plan_day_id, household_id),
+    ).fetchone()
+    if row is None:
+        raise ValueError(f"no plan day {plan_day_id} for household {household_id}")
+    return {"household": household, "now": now,
+            "plan_day": {"id": plan_day_id, "date": row[0], "dish": row[1]}}
+
+
+def build_notif_verdict_prompt(template: str, ctx: dict) -> str:
+    now = ctx["now"]
+    pd = ctx["plan_day"]
+    return (
+        template
+        .replace("{persona_pack}", ctx["household"]["prompt_pack"])
+        .replace("{today}", now.strftime("%Y-%m-%d"))
+        .replace("{weekday}", _WEEKDAYS_ZH[now.weekday()])
+        .replace("{date}", pd["date"].isoformat())
+        .replace("{dish}", pd["dish"])
+        .replace("{plan_day_id}", pd["id"])
+    )
+
+
 def _render_preferences(conn, household_id: str) -> str:
     row = conn.execute(
         "select content from preferences where household_id = %s", (household_id,)
