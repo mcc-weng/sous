@@ -18,6 +18,22 @@ APNs HTTP/2, independent of the worker/laptop.
 **Tech Stack:** Python (worker, psycopg, pytest), PostgreSQL/Supabase (migrations,
 `pg_cron`, `pg_net`), Deno/TypeScript (Edge Function), Swift/SwiftUI (iOS), XCTest.
 
+## Recommended execution order
+
+Tasks are numbered by where they sit in the pipeline (content generation before
+delivery), but **execute 1 → 6 → 5 → 2 → 3 → 4 → 7, not numeric order.** The project's
+own principle is "architecture risk lives first" (spec §9's rationale for why M1 came
+before M2/M3) — the one genuinely unproven piece here is whether
+`pg_cron → pg_net → Edge Function → APNs` actually reaches a real phone at all. Tasks
+2-4 are pure Python logic provable with mocked-brain unit tests; they'll go green
+regardless of whether delivery works, which would hide a delivery-path problem behind a
+wall of passing tests until Task 7. Doing 1 → 6 → 5 first, then manually inserting one
+`notifications` row (`send_at = now()`) and confirming a real device receives it —
+*before* writing any generation code — proves the hard part while there's still nothing
+built on top of it to unwind. If that spike fails, the fix is isolated to Task 5; if it
+had failed after Tasks 2-4 were also built, the same fix would come with more surface
+area to re-verify.
+
 ## Global Constraints
 
 - Design source of truth: `docs/specs/2026-07-25-m3-apns-pipeline-design.md`. Every task
@@ -1188,37 +1204,45 @@ Deno.serve(async () => {
 This is a separate migration file (not folded into Task 1's) because it references the
 deployed function's URL, which doesn't exist until Step 7 below deploys it.
 
+Verified against Supabase's own docs (`supabase.com/docs/guides/functions/schedule-functions`)
+rather than guessed: the documented mechanism stores the project URL and an API key in
+**Supabase Vault**, then reads them via `vault.decrypted_secrets` inside the
+`net.http_post` call — not `current_setting('app.settings...')`, which isn't a
+pre-populated GUC on Supabase and would have failed silently (`net.http_post` failures
+don't raise or log anywhere obvious — this is exactly the kind of thing to verify by
+watching a push arrive, not by reading).
+
+Run once, before applying the migration (values from `supabase status` locally, or the
+project's API settings page on the hosted dashboard — `publishable_key` here is the
+`anon` key, which the function's default JWT verification accepts):
+
+```sql
+select vault.create_secret('http://127.0.0.1:54321', 'project_url');       -- local
+select vault.create_secret('<anon key from supabase status>', 'publishable_key');
+```
+
 ```sql
 -- supabase/migrations/0008_delivery_tick_cron.sql
--- Delivery tick: fires every ~1 min, calls deliver-notifications via pg_net. The
--- function's own service-role key and URL come from Supabase project settings
--- (`vault.decrypted_secrets` holds them once configured via `supabase secrets set`);
--- net.http_post reads them the same way Supabase's own docs recommend for
--- Postgres-triggered Edge Function calls.
+-- Delivery tick: fires every ~1 min, calls deliver-notifications via pg_net, following
+-- Supabase's documented pattern (docs/guides/functions/schedule-functions) exactly —
+-- project_url and publishable_key must already exist in Vault (see above) or every
+-- tick's net.http_post silently no-ops (its errors don't surface anywhere).
 select cron.schedule(
   'delivery-tick',
   '* * * * *',
   $$
   select net.http_post(
-    url := current_setting('app.settings.supabase_url') || '/functions/v1/deliver-notifications',
-    headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key'),
-      'Content-Type', 'application/json'
-    ),
-    body := '{}'::jsonb
-  );
+      url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url')
+             || '/functions/v1/deliver-notifications',
+      headers := jsonb_build_object(
+        'Content-type', 'application/json',
+        'apikey', (select decrypted_secret from vault.decrypted_secrets where name = 'publishable_key')
+      ),
+      body := '{}'::jsonb
+  ) as request_id;
   $$
 );
 ```
-
-**Note for whoever runs this task**: `current_setting('app.settings.supabase_url')` and
-`...service_role_key` must exist as Postgres config settings before this migration runs
-cleanly — on Supabase-hosted projects these are pre-populated; on local dev they are not.
-If `supabase db reset` errors on this migration locally, that's expected until those
-settings are configured (`alter database postgres set app.settings.supabase_url = '...'`)
-— this doesn't block Tasks 1-4 or the Edge Function's own unit tests, only the local
-end-to-end cron wiring. Real-device verification (Task 7) runs against a project where
-this is already configured, or sets it by hand first.
 
 - [ ] **Step 7: Deploy the function and configure secrets**
 
