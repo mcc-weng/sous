@@ -7,6 +7,7 @@ struct CounterView: View {
     @State private var showCookbook = false
     @State private var showNotificationsSettings = false
     @State private var showCookModeForTonight = false
+    @State private var showOnboarding = false
     @State private var cookModeRecipe: Recipe?
     @State private var cookModePlanDay: PlanDay?
 
@@ -36,6 +37,13 @@ struct CounterView: View {
             NotificationsSettingsView().environmentObject(model)
         }
         .task { await model.loadCookbook() }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView().environmentObject(model)
+        }
+        .task {
+            await model.loadPreferences()
+            showOnboarding = needsOnboarding(preferencesContent: model.preferencesContent)
+        }
     }
 
     private var chipRow: some View {
