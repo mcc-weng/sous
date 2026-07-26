@@ -9,6 +9,7 @@ struct OnboardingView: View {
     @State private var answers = OnboardingAnswers()
     @State private var isSubmitting = false
     @State private var submitError: String?
+    @State private var isDone = false
 
     private let stepCount = 5
 
@@ -17,27 +18,31 @@ struct OnboardingView: View {
     }
 
     var body: some View {
-        VStack(spacing: 24) {
-            progressDots
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if stepIndex == 0 {
-                        Text(copy("onboarding_intro",
-                                  fallback: "先讓我認識你一下,幾個小問題,一下就好。"))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+        if isDone {
+            doneView
+        } else {
+            VStack(spacing: 24) {
+                progressDots
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        if stepIndex == 0 {
+                            Text(copy("onboarding_intro",
+                                      fallback: "先讓我認識你一下,幾個小問題,一下就好。"))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        currentStep
                     }
-                    currentStep
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                if let submitError {
+                    Text(submitError).font(.caption).foregroundStyle(.red)
+                }
+                navigationButtons
             }
-            if let submitError {
-                Text(submitError).font(.caption).foregroundStyle(.red)
-            }
-            navigationButtons
+            .padding()
+            .task { await model.loadPersonaCopy() }
         }
-        .padding()
-        .task { await model.loadPersonaCopy() }
     }
 
     @ViewBuilder
@@ -102,6 +107,17 @@ struct OnboardingView: View {
         }
     }
 
+    private var doneView: some View {
+        VStack(spacing: 16) {
+            Text(copy("onboarding_complete",
+                      fallback: "都記住了!以後煮菜通通照你的喜好來,想到什麼隨時再跟我說一聲 🔥"))
+                .font(.title2.bold())
+            Button("開始使用") { dismiss() }
+                .buttonStyle(.borderedProminent)
+        }
+        .padding()
+    }
+
     private func submit() async {
         isSubmitting = true
         submitError = nil
@@ -109,7 +125,7 @@ struct OnboardingView: View {
         do {
             try await model.submitPreferences(content: content)
             isSubmitting = false
-            dismiss()
+            isDone = true
         } catch {
             isSubmitting = false
             submitError = "儲存失敗,請再試一次(\(error.localizedDescription))"
