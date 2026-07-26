@@ -1,5 +1,7 @@
 .env
 .env.*
+keys/
+*.p8
 .DS_Store
 .runtime/
 *.xcuserstate
