@@ -40,9 +40,16 @@ the iOS app — only signed-in/signed-out branching in `SousApp.swift`.
 - **No back-parsing existing preferences into pre-filled chips on redo.** Revisiting via
   settings re-presents the wizard empty; completing it overwrites `content`. Acceptable
   for v1 given "thin" scope; flagged as a known limitation, not a gap to silently carry.
-- **All-skip still counts as complete.** If every question is skipped, `content` is
-  written as a neutral placeholder (`(尚無特殊偏好)`) rather than staying empty — a
-  household with genuinely no dietary restrictions shouldn't be re-prompted every launch.
+- **Household size is mandatory-with-a-default, not skippable like the other four
+  questions.** Discovered during plan-time translation of the composed-text format:
+  a stepper has no meaningful "decline to answer" state the way a chip selection does
+  — a portion-planning app needs *some* household size to plan against. It defaults to
+  2 (matching the current seed) and always contributes a line. This also means a fully
+  answered-or-skipped wizard can never produce empty `content` (there's always at least
+  the household-size line), so the "neutral placeholder for all-skip" idea from the
+  original brainstorm is dropped as unreachable — allergies/dislikes/spice/equipment
+  remain individually skippable, just without a placeholder fallback since one is never
+  needed.
 - **No per-member onboarding.** `preferences` is household-scoped, not user-scoped. If
   one household member already completed onboarding, subsequent members on the same
   household just see Kitchen Counter directly.
@@ -71,8 +78,10 @@ Two independent pieces, plus one migration each:
 ## Component 1: Onboarding wizard
 
 Five screens, one question each, progress dots, small 小當家 avatar + `copy_pack`-sourced
-framing text per screen. Back navigation allowed; each question is individually
-skippable (an omitted answer just drops that line from the composed text, not a blocker).
+framing text per screen. Back navigation allowed. Questions 1–4 are individually
+skippable (an omitted answer just drops that line from the composed text, not a
+blocker); question 5 (household size) is mandatory-with-a-default — see the
+scope-decision note above.
 
 | # | Question | Widget | Composes to (example) |
 |---|---|---|---|
@@ -80,18 +89,20 @@ skippable (an omitted answer just drops that line from the composed text, not a 
 | 2 | 不吃的東西 | Multi-select chips (香菜/內臟/苦瓜/茄子/...) + "其他" text field | `不吃香菜、內臟` |
 | 3 | 辣度 | Segmented control: 不辣／小辣／中辣／大辣 | `辣度:中辣 OK` |
 | 4 | 設備 | Multi-select chips (瓦斯爐/電磁爐/烤箱/電子鍋/氣炸鍋/微波爐) | `設備:瓦斯爐、烤箱、電子鍋` |
-| 5 | 人數 | Stepper, 1–8+ | `2人份` |
+| 5 | 人數 | Stepper, 1–8+, defaults to 2 | `2人份` |
 
 Final `content` is these lines joined one per line, in this fixed order, matching
 `seed.sql`'s existing convention exactly — `context.py`'s `_render_preferences` and every
 prompt template that reads `{preferences}` need zero changes.
 
-If every question is skipped, `content` is written as `(尚無特殊偏好)` instead of an
-empty string, so the household isn't re-prompted every launch.
+Because the household-size line is always present, `content` can never come back empty
+from a completed wizard — even a fully-skipped-except-size pass still writes at least
+`2人份`, so the household isn't re-prompted every launch.
 
-**Composition logic** (structured selections → free-text lines, including the all-skip
-placeholder) is a pure function, unit-testable the same way `WeekBoardLogic`/
-`ShoppingListLogic` already are (`ios/Sous/*Logic.swift` + `*LogicTests.swift` pattern).
+**Composition logic** (structured selections → free-text lines, including omitted-line
+behavior for skipped questions 1–4) is a pure function, unit-testable the same way
+`WeekBoardLogic`/`ShoppingListLogic` already are (`ios/Sous/*Logic.swift` +
+`*LogicTests.swift` pattern).
 
 **Write:** on completion, `preferences` upsert via the Supabase client (new RLS policy
 from Architecture item 2). If the write fails (offline, RLS rejection), show inline retry
@@ -103,9 +114,8 @@ allowed through to Kitchen Counter with an unsaved completion.
 **First-run trigger.** `AppModel.refreshHousehold()` also fetches `preferences.content`.
 If empty/default, present the wizard `fullScreenCover`, blocking Kitchen Counter until
 completed. No extra local "already nagged" flag is needed — since `content` only becomes
-non-empty once the wizard is actually completed (or all-skipped to the neutral
-placeholder), re-launching mid-way correctly re-presents it; that's the desired "forced
-once" behavior, not spam.
+non-empty once the wizard is actually completed, re-launching mid-way correctly
+re-presents it; that's the desired "forced once" behavior, not spam.
 
 **Revisit entry point.** `NotificationsSettingsView` is currently the only settings-style
 sheet (reached from `chipRow`). Add a "偏好設定" section there with a "重新設定偏好"
@@ -135,8 +145,8 @@ client-side), since there's no fixed question/answer shape to a spontaneous chat
 ## Testing / verification
 
 - Unit tests: wizard composition logic (structured selections → free-text lines,
-  including the all-skip placeholder and omitted-line behavior for individually skipped
-  questions).
+  including omitted-line behavior for individually skipped questions 1–4 and the
+  always-present household-size line).
 - `state_api` test: `update_preferences`, following the existing `flag_staple` test
   pattern in `worker/tests/`.
 - Real-use exit check: since the real sandbox household already has non-empty seeded
