@@ -75,10 +75,12 @@ struct Household: Codable {
     let name: String
     let workerSeenAt: Date?
     let timezone: String
+    let personaId: UUID
 
     enum CodingKeys: String, CodingKey {
         case id, name, timezone
         case workerSeenAt = "worker_seen_at"
+        case personaId = "persona_id"
     }
 }
 
@@ -147,5 +149,17 @@ struct Verdict: Codable, Identifiable, Equatable {
     enum CodingKeys: String, CodingKey {
         case id, rating, note
         case createdAt = "created_at"
+    }
+}
+
+struct PreferencesRow: Codable {
+    let content: String
+}
+
+struct PersonaCopyRow: Codable {
+    let copyPack: [String: String]
+
+    enum CodingKeys: String, CodingKey {
+        case copyPack = "copy_pack"
     }
 }

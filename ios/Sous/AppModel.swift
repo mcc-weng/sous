@@ -17,6 +17,8 @@ final class AppModel: ObservableObject {
     @Published var recipes: [Recipe] = []
     @Published var deviceTokenRegistered = false
     @Published var deviceTokenRegistrationError: String?
+    @Published var preferencesContent: String?
+    @Published var personaCopy: [String: String] = [:]
 
     init() {
         // Subscribed here (not in the settings sheet) because APNs registration is
@@ -72,7 +74,7 @@ final class AppModel: ObservableObject {
     func refreshHousehold() async {
         do {
             let rows: [Household] = try await client.from("households")
-                .select("id,name,worker_seen_at,timezone").execute().value
+                .select("id,name,worker_seen_at,timezone,persona_id").execute().value
             household = rows.first
             if let id = household?.id {
                 UserDefaults(suiteName: "group.com.mikeweng.sous")?.set(id.uuidString, forKey: "household_id")
@@ -144,6 +146,35 @@ final class AppModel: ObservableObject {
                 .order("name")
                 .execute().value
         } catch { print("shopping items load: \(error)") }
+    }
+
+    func loadPreferences() async {
+        do {
+            let rows: [PreferencesRow] = try await client.from("preferences")
+                .select("content").execute().value
+            preferencesContent = rows.first?.content
+        } catch { print("preferences load: \(error)") }
+    }
+
+    func loadPersonaCopy() async {
+        guard let personaId = household?.personaId else { return }
+        do {
+            let row: PersonaCopyRow = try await client.from("personas")
+                .select("copy_pack").eq("id", value: personaId).single().execute().value
+            personaCopy = row.copyPack
+        } catch { print("persona copy load: \(error)") }
+    }
+
+    /// Direct write, no job — instant, matching the shopping-checkbox precedent
+    /// (`toggleShoppingItem`). Throws so `OnboardingView` can show inline retry instead
+    /// of silently discarding a completed interview.
+    func submitPreferences(content: String) async throws {
+        guard let household else { return }
+        struct Upsert: Encodable { let household_id: UUID; let content: String }
+        try await client.from("preferences")
+            .upsert(Upsert(household_id: household.id, content: content))
+            .execute()
+        preferencesContent = content
     }
 
     func loadCookbook() async {
