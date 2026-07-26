@@ -3,10 +3,12 @@
 Realtime job subscription is a M2 optimization; a 3s poll on an indexed
 status column is plenty for one household and much simpler to reason about.
 """
+import datetime
 import json
 import logging
 import pathlib
 import time
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
@@ -21,6 +23,9 @@ def load_config() -> dict:
 
 
 def _apologize(conn, household_id: str, job_id: str) -> None:
+    kind = conn.execute("select kind from jobs where id=%s", (job_id,)).fetchone()[0]
+    if kind == "notif_generate":
+        return
     copy_pack = db.get_household(conn, household_id)["copy_pack"]
     message = copy_pack.get("failure_message", "Something went wrong — please try again.")
     db.insert_chef_message(conn, household_id, message, job_id)
@@ -91,6 +96,28 @@ def generate_recipe_intake_reply(conn, job: db.Job, cfg: dict) -> str:
                            extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
 
 
+def generate_notif_reply(conn, job: db.Job, cfg: dict) -> str:
+    """notif_generate has two payload shapes, distinguished by notif_kind:
+    'week_batch' (Task 3, this function's only branch so far) and 'verdict_action'
+    (added by Task 4)."""
+    notif_kind = job.payload["notif_kind"]
+    if notif_kind == "week_batch":
+        ctx = context.fetch_notif_week_context(conn, job.household_id, job.payload["week_id"])
+        template = (ROOT / "prompts" / "notif_week.md").read_text()
+        prompt = context.build_notif_week_prompt(template, ctx)
+    elif notif_kind == "verdict_action":
+        ctx = context.fetch_notif_verdict_context(conn, job.household_id, job.payload["plan_day_id"])
+        template = (ROOT / "prompts" / "notif_verdict.md").read_text()
+        prompt = context.build_notif_verdict_prompt(template, ctx)
+    else:
+        raise ValueError(f"unknown notif_kind: {notif_kind}")
+    return brain.run_brain(prompt, model=cfg["chat_model"],
+                           timeout=cfg["chat_timeout_sec"],
+                           allowed_tools=cfg["chat_allowed_tools"],
+                           cwd=str(ROOT),
+                           extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
+
+
 def process_one(conn, cfg: dict) -> bool:
     for job_id in db.requeue_stale(conn, cfg["stale_after_sec"], cfg["max_attempts"]):
         hid = db.get_job_household(conn, job_id)
@@ -108,10 +135,14 @@ def process_one(conn, cfg: dict) -> bool:
         elif job.kind == "recipe_intake":
             mode = "recipe_intake"
             reply = generate_recipe_intake_reply(conn, job, cfg)
+        elif job.kind == "notif_generate":
+            mode = "notif_generate"
+            reply = generate_notif_reply(conn, job, cfg)
         else:
             raise ValueError(f"unknown job kind: {job.kind}")
         with conn.transaction():
-            db.insert_chef_message(conn, job.household_id, reply, job.id)
+            if job.kind != "notif_generate":
+                db.insert_chef_message(conn, job.household_id, reply, job.id)
             db.complete_job(conn, job.id, {"reply_chars": len(reply), "mode": mode})
     except Exception as exc:  # noqa: BLE001 — worker must never die on one job
         log.exception("job %s failed (attempt %d)", job.id, job.attempts)
@@ -120,6 +151,16 @@ def process_one(conn, cfg: dict) -> bool:
             _apologize(conn, job.household_id, job.id)
         else:
             db.requeue_job(conn, job.id)
+    else:
+        if mode == "ritual":
+            try:
+                household = db.get_household(conn, job.household_id)
+                now = datetime.datetime.now(ZoneInfo(household["timezone"]))
+                target_week_of = context.week_monday(now.date()) + datetime.timedelta(weeks=1)
+                db.enqueue_week_notifications_if_locked(conn, job.household_id, target_week_of)
+            except Exception:
+                log.exception("failed to enqueue week notifications for household %s",
+                             job.household_id)
     return True
 
 

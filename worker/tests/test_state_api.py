@@ -530,3 +530,79 @@ def test_cli_save_recipe(api_hid):
     assert proc.returncode == 0, proc.stderr
     out = json.loads(proc.stdout)
     assert out["ok"] is True and out["slug"] == "three-cup-chicken"
+
+
+def test_schedule_notification_morning_nudge_uses_fixed_time(conn, api_hid):
+    out = state_api.schedule_notification(
+        conn, api_hid, "morning_nudge", "早安!", "今天煮咖哩飯", date=MONDAY,
+    )
+    assert out["ok"] is True and out["deduped"] is False
+    send_at, kind, title, body = conn.execute(
+        "select send_at, kind, title, body from notifications where id = %s",
+        (out["id"],),
+    ).fetchone()
+    assert kind == "morning_nudge" and title == "早安!" and body == "今天煮咖哩飯"
+    local = send_at.astimezone(ZoneInfo("Australia/Sydney"))
+    assert (local.date(), local.hour, local.minute) == (MONDAY, 7, 30)
+
+
+def test_schedule_notification_prep_reminder_uses_fixed_time(conn, api_hid):
+    out = state_api.schedule_notification(
+        conn, api_hid, "prep_reminder", "備料提醒", "記得先醃肉", date=MONDAY,
+    )
+    local = conn.execute(
+        "select send_at from notifications where id = %s", (out["id"],)
+    ).fetchone()[0].astimezone(ZoneInfo("Australia/Sydney"))
+    assert (local.date(), local.hour, local.minute) == (MONDAY, 15, 0)
+
+
+def test_schedule_notification_verdict_action_sends_now(conn, api_hid):
+    before = datetime.datetime.now(ZoneInfo("Australia/Sydney"))
+    out = state_api.schedule_notification(
+        conn, api_hid, "verdict_action", "煮得如何?", "跟小當家說說今天的咖哩飯吧",
+    )
+    send_at = conn.execute(
+        "select send_at from notifications where id = %s", (out["id"],)
+    ).fetchone()[0]
+    assert send_at >= before  # not scheduled for a fixed future time-of-day
+
+
+def test_schedule_notification_requires_date_for_fixed_time_kinds(conn, api_hid):
+    with pytest.raises(ValueError, match="requires --date"):
+        state_api.schedule_notification(conn, api_hid, "morning_nudge", "t", "b")
+
+
+def test_schedule_notification_rejects_unknown_kind(conn, api_hid):
+    with pytest.raises(ValueError, match="kind must be one of"):
+        state_api.schedule_notification(conn, api_hid, "bogus", "t", "b")
+
+
+def test_schedule_notification_dedupes_on_source_id(conn, api_hid):
+    day_row = conn.execute(
+        "select id::text from plan_days where household_id=%s and date=%s",
+        (api_hid, MONDAY),
+    ).fetchone()
+    first = state_api.schedule_notification(
+        conn, api_hid, "morning_nudge", "早安!", "咖哩飯", date=MONDAY,
+        source_id=day_row[0],
+    )
+    second = state_api.schedule_notification(
+        conn, api_hid, "morning_nudge", "早安(retry)!", "咖哩飯", date=MONDAY,
+        source_id=day_row[0],
+    )
+    assert first["deduped"] is False and second["deduped"] is True
+    count = conn.execute(
+        "select count(*) from notifications where household_id=%s and kind='morning_nudge'",
+        (api_hid,),
+    ).fetchone()[0]
+    assert count == 1
+
+
+def test_schedule_notification_cli_dispatches(api_hid):
+    # Reuses the existing _run_cli helper (defined further down this file, around the
+    # cli_get_plan_roundtrip tests) rather than inventing a new subprocess pattern.
+    proc = _run_cli(["schedule-notification", "--kind", "verdict_action",
+                     "--title", "煮得如何?", "--body", "說說看"], api_hid)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["ok"] is True and out["kind"] == "verdict_action"

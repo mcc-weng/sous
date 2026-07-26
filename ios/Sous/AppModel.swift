@@ -15,6 +15,31 @@ final class AppModel: ObservableObject {
     @Published var nextWeekDays: [PlanDay] = []
     @Published var shoppingItems: [ShoppingItem] = []
     @Published var recipes: [Recipe] = []
+    @Published var deviceTokenRegistered = false
+    @Published var deviceTokenRegistrationError: String?
+
+    init() {
+        // Subscribed here (not in the settings sheet) because APNs registration is
+        // async and its callback isn't scoped to any view's lifetime — a user who
+        // grants permission and immediately dismisses the sheet must still end up
+        // registered. AppModel is the one thing alive for the whole app session.
+        NotificationCenter.default.addObserver(
+            forName: .sousDidRegisterDeviceToken, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let tokenHex = note.userInfo?["tokenHex"] as? String else { return }
+            Task { @MainActor in
+                await self?.registerDeviceToken(tokenHex: tokenHex)
+            }
+        }
+        NotificationCenter.default.addObserver(
+            forName: .sousDidFailToRegisterDeviceToken, object: nil, queue: .main
+        ) { [weak self] note in
+            let message = note.userInfo?["message"] as? String
+            Task { @MainActor in
+                self?.deviceTokenRegistrationError = message ?? "註冊失敗"
+            }
+        }
+    }
 
     // MARK: auth
 
@@ -173,6 +198,22 @@ final class AppModel: ObservableObject {
             if let current = shoppingItems.firstIndex(where: { $0.id == item.id }) {
                 shoppingItems[current].checked = !newChecked
             }
+        }
+    }
+
+    /// Upserts the APNs device token once `SousAppDelegate` hands it back via
+    /// `.sousDidRegisterDeviceToken`. See the `init()` comment for why this lives on
+    /// AppModel rather than `NotificationsSettingsView`.
+    func registerDeviceToken(tokenHex: String) async {
+        guard let userId = session?.user.id else { return }
+        let upsert = makeDeviceTokenUpsert(userId: userId, tokenHex: tokenHex)
+        do {
+            try await client.from("device_tokens").upsert(upsert).execute()
+            deviceTokenRegistered = true
+            deviceTokenRegistrationError = nil
+        } catch {
+            print("device token upsert: \(error)")
+            deviceTokenRegistrationError = error.localizedDescription
         }
     }
 

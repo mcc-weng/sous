@@ -1,6 +1,8 @@
 import datetime
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from sous_worker import context
 from tests.conftest import SANDBOX
 
@@ -9,6 +11,31 @@ TEMPLATE = (
     "PLAN:\n{week_plan}\nPREFS:\n{preferences}\nCOOKBOOK:\n{cookbook_index}\n"
     "SHOPPING:\n{shopping_open}\nHISTORY:\n{history}\nNEW:\n{messages}"
 )
+
+MONDAY = context.week_monday(datetime.datetime.now(ZoneInfo("Australia/Sydney")).date())
+
+
+@pytest.fixture
+def api_hid(conn):
+    """Dedicated household so notif_verdict context tests never disturb the seeded
+    sandbox. Simplified from tests/test_state_api.py's api_hid fixture (single
+    plan_day, not two — this file only needs one dish) and not shared via
+    conftest.py — duplicated locally to keep this task's changes self-contained."""
+    hid = conn.execute(
+        "insert into households (name, persona_id) "
+        "select 'notif-verdict-test', id from personas limit 1 returning id::text"
+    ).fetchone()[0]
+    wid = conn.execute(
+        "insert into plan_weeks (household_id, week_of) values (%s, %s) returning id",
+        (hid, MONDAY),
+    ).fetchone()[0]
+    conn.execute(
+        "insert into plan_days (week_id, household_id, date, dish, mode, prep_note) "
+        "values (%s, %s, %s, '咖哩飯', 'batch', '前一晚醃肉')",
+        (wid, hid, MONDAY),
+    )
+    yield hid
+    conn.execute("delete from households where id = %s", (hid,))
 
 
 def test_fetch_context_renders_seeded_week(conn):
@@ -237,4 +264,55 @@ def test_build_recipe_intake_prompt_substitutes_everything(conn):
     assert "https://instagram.com/reel/abc" in prompt
     assert "mike" in prompt
     assert "食譜內容" in prompt
+    assert "{" not in prompt.replace("{}", "")
+
+
+def test_fetch_notif_week_context_includes_day_ids(conn):
+    week_id = conn.execute(
+        "select w.id::text from plan_weeks w "
+        "where w.household_id=%s and w.status='locked' order by w.week_of desc limit 1",
+        (SANDBOX,),
+    ).fetchone()[0]
+    ctx = context.fetch_notif_week_context(conn, SANDBOX, week_id)
+    assert ctx["household"]["name"] == "sandbox"
+    assert len(ctx["days"]) >= 1
+    first = ctx["days"][0]
+    assert set(first) == {"id", "date", "dish", "mode", "prep_note"}
+
+
+def test_build_notif_week_prompt_substitutes_placeholders(conn):
+    # Inline template, not a read of the real prompts/notif_week.md file — matches
+    # this file's existing convention (see test_build_ritual_prompt_substitutes_everything
+    # above), which keeps context-building tests independent of prompt copy changes.
+    template = "{persona_pack}\n{today}\n{weekday}\n{days}"
+    week_id = conn.execute(
+        "select w.id::text from plan_weeks w "
+        "where w.household_id=%s and w.status='locked' order by w.week_of desc limit 1",
+        (SANDBOX,),
+    ).fetchone()[0]
+    ctx = context.fetch_notif_week_context(conn, SANDBOX, week_id)
+    prompt = context.build_notif_week_prompt(template, ctx)
+    assert "{" not in prompt.replace("{}", "")
+    assert ctx["days"][0]["dish"] in prompt
+
+
+def test_fetch_notif_verdict_context_includes_dish(conn, api_hid):
+    day_id = conn.execute(
+        "select id::text from plan_days where household_id=%s and date=%s",
+        (api_hid, MONDAY),
+    ).fetchone()[0]
+    ctx = context.fetch_notif_verdict_context(conn, api_hid, day_id)
+    assert ctx["plan_day"]["dish"] == "咖哩飯"
+    assert ctx["plan_day"]["id"] == day_id
+
+
+def test_build_notif_verdict_prompt_substitutes_dish(conn, api_hid):
+    template = "{persona_pack}\n{today}\n{weekday}\n{date}\n{dish}\n{plan_day_id}"
+    day_id = conn.execute(
+        "select id::text from plan_days where household_id=%s and date=%s",
+        (api_hid, MONDAY),
+    ).fetchone()[0]
+    ctx = context.fetch_notif_verdict_context(conn, api_hid, day_id)
+    prompt = context.build_notif_verdict_prompt(template, ctx)
+    assert "咖哩飯" in prompt
     assert "{" not in prompt.replace("{}", "")
