@@ -297,6 +297,16 @@ def schedule_notification(conn, household_id: str, kind: str, title: str, body: 
     return {"ok": True, "id": row[0], "kind": kind, "deduped": False}
 
 
+def update_preferences(conn, household_id: str, content: str) -> dict:
+    conn.execute(
+        "insert into preferences (household_id, content) values (%s, %s) "
+        "on conflict (household_id) do update set content = excluded.content, "
+        "updated_at = now()",
+        (household_id, content),
+    )
+    return {"ok": True, "content": content}
+
+
 def _ensure_proposing_week_for_test(conn, household_id: str, week_of) -> str:
     """Test-only helper — production code creates this row via
     sous_worker.db.ensure_proposing_week from main.py, not from here."""
@@ -375,6 +385,8 @@ def _parser() -> argparse.ArgumentParser:
     n.add_argument("--date", type=datetime.date.fromisoformat)
     n.add_argument("--source-id", dest="source_id")
     n.add_argument("--deeplink")
+    up = sub.add_parser("update-preferences")
+    up.add_argument("--content", required=True)
     return p
 
 
@@ -420,6 +432,8 @@ def _dispatch(conn, household_id: str, args) -> dict:
         return schedule_notification(conn, household_id, args.kind, args.title, args.body,
                                      date=args.date, source_id=args.source_id,
                                      deeplink=args.deeplink)
+    if args.verb == "update-preferences":
+        return update_preferences(conn, household_id, args.content)
     raise ValueError(f"unknown verb {args.verb}")
 
 

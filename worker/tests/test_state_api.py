@@ -225,12 +225,35 @@ def test_capture_inbox_inserts(conn, api_hid):
     assert row == ("craving", "想吃泰式")
 
 
+def test_update_preferences_upserts(conn, api_hid):
+    first = state_api.update_preferences(conn, api_hid, "2人份\n不吃香菜")
+    assert first["ok"] is True
+    row = conn.execute(
+        "select content from preferences where household_id = %s", (api_hid,),
+    ).fetchone()
+    assert row == ("2人份\n不吃香菜",)
+
+    again = state_api.update_preferences(conn, api_hid, "2人份\n不吃香菜、內臟")
+    assert again["ok"] is True
+    row = conn.execute(
+        "select content from preferences where household_id = %s", (api_hid,),
+    ).fetchone()
+    assert row == ("2人份\n不吃香菜、內臟",)
+
+
 def test_cli_shopping_verbs(api_hid):
     add = _run_cli(["add-shopping-item", "--name", "fish sauce",
                     "--qty", "1", "--section", "pantry"], api_hid)
     assert json.loads(add.stdout)["ok"] is True
     rm = _run_cli(["remove-shopping-item", "--name", "fish sauce"], api_hid)
     assert json.loads(rm.stdout)["removed"] == 1
+
+
+def test_cli_update_preferences(api_hid):
+    proc = _run_cli(["update-preferences", "--content", "辣度:中辣 OK"], api_hid)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["ok"] is True and out["content"] == "辣度:中辣 OK"
 
 
 def _week_of(monday: datetime.date, offset: int) -> str:
