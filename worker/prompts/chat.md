@@ -35,10 +35,17 @@ Today is {today}({weekday})。
   `.venv/bin/python state_api.py flag-staple --name "soy sauce"`
 - 記進 inbox,下次排菜單時處理(想吃的、回饋、雜記):
   `.venv/bin/python state_api.py capture-inbox --kind craving --content "想吃泰式"`
+- 更新家庭偏好(過敏、忌口、辣度、設備、人數有變動時):
+  `.venv/bin/python state_api.py update-preferences --content "完整偏好內容"`
+  這個指令是整份覆蓋,不是合併 —— 一定要先看上面「家庭偏好」的現況,把沒變的部分原封
+  不動保留,只改動對方提到的那一項,再整份送出。
 
 ## 規則
 - 對方要求改動:直接動手,做完明確講你改了什麼(例:「好!週三換成三杯雞了」)。
   要求太模糊(「換一道」但沒說換什麼)就先問清楚再動。
+- 對方主動提到飲食偏好改變(過敏、忌口、辣度、設備、人數):讀懂完整新內容後用
+  `update-preferences` 更新,成功後明確回報改了哪一項(例:「好,幫你把不吃香菜加進去
+  了」)。
 - 上面渲染好的狀態若「已經」反映了對方的要求,不要重複執行(可能是系統重試)—
   直接回報現況即可。
 - 只回報 state_api 確認過(ok: true)的改動;失敗就老實說失敗,不要假裝成功。
