@@ -34,6 +34,15 @@ struct NotificationsSettingsView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(isRequesting)
+
+                Divider()
+
+                Text("偏好設定").font(.headline)
+                Button("重新設定偏好") {
+                    model.onboardingRestartRequested = true
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
             }
             .padding()
             .toolbar {

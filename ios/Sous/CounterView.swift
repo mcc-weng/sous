@@ -40,6 +40,11 @@ struct CounterView: View {
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView().environmentObject(model)
         }
+        .onChange(of: model.onboardingRestartRequested) { _, requested in
+            guard requested else { return }
+            showOnboarding = true
+            model.onboardingRestartRequested = false
+        }
         .task {
             await model.loadPreferences()
             showOnboarding = needsOnboarding(preferencesContent: model.preferencesContent)

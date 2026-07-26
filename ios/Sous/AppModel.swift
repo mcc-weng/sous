@@ -19,6 +19,7 @@ final class AppModel: ObservableObject {
     @Published var deviceTokenRegistrationError: String?
     @Published var preferencesContent: String?
     @Published var personaCopy: [String: String] = [:]
+    @Published var onboardingRestartRequested = false
 
     init() {
         // Subscribed here (not in the settings sheet) because APNs registration is
