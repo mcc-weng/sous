@@ -169,8 +169,10 @@ final class AppModel: ObservableObject {
     /// Direct write, no job — instant, matching the shopping-checkbox precedent
     /// (`toggleShoppingItem`). Throws so `OnboardingView` can show inline retry instead
     /// of silently discarding a completed interview.
+    struct MissingHouseholdError: Error {}
+
     func submitPreferences(content: String) async throws {
-        guard let household else { return }
+        guard let household else { throw MissingHouseholdError() }
         struct Upsert: Encodable { let household_id: UUID; let content: String }
         try await client.from("preferences")
             .upsert(Upsert(household_id: household.id, content: content))

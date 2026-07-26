@@ -91,9 +91,15 @@ scope-decision note above.
 | 4 | 設備 | Multi-select chips (瓦斯爐/電磁爐/烤箱/電子鍋/氣炸鍋/微波爐) | `設備:瓦斯爐、烤箱、電子鍋` |
 | 5 | 人數 | Stepper, 1–8+, defaults to 2 | `2人份` |
 
-Final `content` is these lines joined one per line, in this fixed order, matching
-`seed.sql`'s existing convention exactly — `context.py`'s `_render_preferences` and every
-prompt template that reads `{preferences}` need zero changes.
+Final `content` is these lines joined one per line, in this fixed order. This is a
+readable free-text convention *like* `seed.sql`'s (colon-separated fields, 、-joined
+lists), not a byte-for-byte match — the wizard's lines have no `- ` bullet prefix and no
+space in `2人份` (`seed.sql` has both), and order differs (household size last here,
+first in `seed.sql`). This is harmless: `context.py`'s `_render_preferences` passes
+`content` through verbatim with no parsing, so prompt templates that read `{preferences}`
+need zero changes regardless of which convention produced the text — the brain reads
+free text either way. Found and corrected during the whole-branch review (2026-07-27);
+the original claim of an exact match was wrong.
 
 Because the household-size line is always present, `content` can never come back empty
 from a completed wizard — even a fully-skipped-except-size pass still writes at least
