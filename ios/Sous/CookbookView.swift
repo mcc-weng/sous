@@ -30,10 +30,15 @@ struct CookbookView: View {
     }
 
     private func recipeCard(_ recipe: Recipe) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        let cookedCount = cookCount(sessions: model.cookSessions, recipeId: recipe.id)
+        return VStack(alignment: .leading, spacing: 4) {
             Text(recipe.title).font(.headline).lineLimit(2)
             Text("\(recipe.ingredients.count) 項食材 · \(recipe.steps.count) 個步驟")
                 .font(.caption2).foregroundStyle(.secondary)
+            if cookedCount > 0 {
+                Text("已煮 \(cookedCount) 次")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
