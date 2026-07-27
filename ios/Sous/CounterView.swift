@@ -84,8 +84,10 @@ struct CounterView: View {
             Text(model.household?.name ?? "…").font(.headline)
             Spacer()
             let present = chefIsPresent(workerSeenAt: model.household?.workerSeenAt)
-            Label(present ? "chef in" : "chef out",
-                  systemImage: present ? "flame.fill" : "moon.zzz")
+            let presenceLabel = present
+                ? (model.personaCopy["presence_in"] ?? "chef in")
+                : (model.personaCopy["presence_out"] ?? "chef out")
+            Label(presenceLabel, systemImage: present ? "flame.fill" : "moon.zzz")
                 .font(.caption)
                 .foregroundStyle(present ? .orange : .secondary)
         }
