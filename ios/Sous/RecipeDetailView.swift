@@ -52,6 +52,11 @@ struct RecipeDetailView: View {
                         }
                     }
                 }
+                let cookedCount = cookCount(sessions: model.cookSessions, recipeId: recipe.id)
+                if cookedCount > 0 {
+                    Text("已煮 \(cookedCount) 次")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Button("開始煮") { showCookMode = true }
                     .buttonStyle(.borderedProminent)
                     .frame(maxWidth: .infinity)
