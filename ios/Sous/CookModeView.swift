@@ -131,10 +131,19 @@ struct CookModeView: View {
     }
 
     private var doneView: some View {
-        VStack(spacing: 16) {
+        let count = cookCount(sessions: model.cookSessions, recipeId: recipe.id)
+        return VStack(spacing: 16) {
             Label("煮好了!", systemImage: "checkmark.seal.fill")
                 .font(.title.bold())
                 .foregroundStyle(.green)
+            if isMilestone(count) {
+                Text(milestoneReactionText(count: count, template: model.personaCopy["cook_milestone_reaction"]))
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+            } else if count > 0 {
+                Text("已煮 \(count) 次")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
             Button("關閉") { dismiss() }
                 .buttonStyle(.borderedProminent)
         }
@@ -167,6 +176,7 @@ struct CookModeView: View {
                     .update(Complete(completed_at: nowISO, step_ticks: Array(recipe.steps.indices)))
                     .eq("id", value: sessionId)
                     .execute()
+                await model.loadCookbook()
             } catch { print("complete cook session: \(error)") }
         }
         phase = planDay != nil ? .verdict : .done
