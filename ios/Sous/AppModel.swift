@@ -15,6 +15,7 @@ final class AppModel: ObservableObject {
     @Published var nextWeekDays: [PlanDay] = []
     @Published var shoppingItems: [ShoppingItem] = []
     @Published var recipes: [Recipe] = []
+    @Published var cookSessions: [CookSession] = []
     @Published var deviceTokenRegistered = false
     @Published var deviceTokenRegistrationError: String?
     @Published var preferencesContent: String?
@@ -66,6 +67,7 @@ final class AppModel: ObservableObject {
 
     func loadAll() async {
         await refreshHousehold()
+        await loadPersonaCopy()
         await loadTonight()
         await loadMessages()
         await loadWeekBoard()
@@ -185,6 +187,9 @@ final class AppModel: ObservableObject {
             recipes = try await client.from("recipes")
                 .select("id,slug,title,source_block,body_md,ingredients,steps,created_at")
                 .order("created_at", ascending: false)
+                .execute().value
+            cookSessions = try await client.from("cook_sessions")
+                .select("id,recipe_id,started_at,completed_at")
                 .execute().value
         } catch { print("cookbook load: \(error)") }
     }
