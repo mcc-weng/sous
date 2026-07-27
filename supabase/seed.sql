@@ -27,7 +27,7 @@ insert into preferences (household_id, content) values (
 - 設備:瓦斯爐、烤箱、電子鍋'
 );
 
-insert into recipes (id, household_id, slug, title, body_md, ingredients) values
+insert into recipes (id, household_id, slug, title, body_md, ingredients, steps) values
 ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000001',
  'scallion-chicken-rice', '蔥香雞腿飯',
  '**食材**(2 人份)
@@ -38,7 +38,13 @@ insert into recipes (id, household_id, slug, title, body_md, ingredients) values
 2. 中火煎雞皮面 6 分鐘至金黃(🔥 聽到滋滋聲變小就翻面)。
 3. 下蔥薑與醬油,小火燜 8 分鐘。
 4. 切件鋪在白飯上,淋醬汁。',
- '["去骨雞腿排 2 塊","蔥 3 支","薑 4 片","醬油 2 大匙","米 1.5 杯"]'::jsonb),
+ '[{"name":"去骨雞腿排","qty":"2 塊"},{"name":"蔥","qty":"3 支"},{"name":"薑","qty":"4 片"},{"name":"醬油","qty":"2 大匙"},{"name":"米","qty":"1.5 杯"}]'::jsonb,
+ '[
+   {"text":"雞腿排兩面抹鹽,靜置 10 分鐘。","duration_sec":600},
+   {"text":"中火煎雞皮面 6 分鐘至金黃。","tip":"聽到滋滋聲變小就翻面","duration_sec":360},
+   {"text":"下蔥薑與醬油,小火燜 8 分鐘。","duration_sec":480},
+   {"text":"切件鋪在白飯上,淋醬汁。"}
+ ]'::jsonb),
 ('00000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000001',
  'pesto-chicken-pasta', '青醬雞胸義大利麵',
  '**食材**(2 人份)
@@ -48,7 +54,12 @@ insert into recipes (id, household_id, slug, title, body_md, ingredients) values
 1. 麵下鍋煮至包裝時間減 1 分鐘。
 2. 雞胸切條,中火煎 4 分鐘。
 3. 下青醬與煮麵水 2 大匙,拌勻。',
- '["雞胸 1 塊","青醬 3 大匙","義大利麵 180g","蒜 2 瓣"]'::jsonb),
+ '[{"name":"雞胸","qty":"1 塊"},{"name":"青醬","qty":"3 大匙"},{"name":"義大利麵","qty":"180g"},{"name":"蒜","qty":"2 瓣"}]'::jsonb,
+ '[
+   {"text":"麵下鍋煮至包裝時間減 1 分鐘。"},
+   {"text":"雞胸切條,中火煎 4 分鐘。","duration_sec":240},
+   {"text":"下青醬與煮麵水 2 大匙,拌勻。"}
+ ]'::jsonb),
 ('00000000-0000-0000-0000-000000000103', '00000000-0000-0000-0000-000000000001',
  'mapo-tofu', '麻婆豆腐',
  '**食材**(2 人份)
@@ -58,7 +69,12 @@ insert into recipes (id, household_id, slug, title, body_md, ingredients) values
 1. 豆腐切塊,鹽水汆燙 2 分鐘(💡 不易碎)。
 2. 絞肉炒散,下豆瓣醬炒出紅油。
 3. 下豆腐與水 150ml,小火煮 5 分鐘,勾芡。',
- '["板豆腐 1 盒","豬絞肉 150g","豆瓣醬 1.5 大匙","蒜末","蔥花"]'::jsonb);
+ '[{"name":"板豆腐","qty":"1 盒"},{"name":"豬絞肉","qty":"150g"},{"name":"豆瓣醬","qty":"1.5 大匙"},{"name":"蒜末","qty":null},{"name":"蔥花","qty":null}]'::jsonb,
+ '[
+   {"text":"豆腐切塊,鹽水汆燙 2 分鐘。","tip":"不易碎","duration_sec":120},
+   {"text":"絞肉炒散,下豆瓣醬炒出紅油。"},
+   {"text":"下豆腐與水 150ml,小火煮 5 分鐘,勾芡。","duration_sec":300}
+ ]'::jsonb);
 
 -- current week (Monday-anchored), 7 days
 insert into plan_weeks (id, household_id, week_of, status, reasoning) values (
