@@ -12,6 +12,32 @@ persona is **小當家** 🔥 — 熱血 (fired-up), dramatic, catchphrase 「�
 uses daily for the same job — the app needs to feel like a genuine upgrade over chatting
 with a bot in a text channel, not just a reskin of it.
 
+## Why this pass exists — the actual goal, not just the task list
+
+The app already works end-to-end (real chat, real meal planning, real cooking flow) but
+has zero visual identity and several interactions that are more effortful than they need
+to be. Two things should both be true when this pass is done:
+
+1. **Faster, more efficient, more convenient than the Discord version it replaces.**
+   Concretely: fewer moments that require typing when a tap would do (see quick-reply /
+   swipe below), less scrolling back and forth mid-task (the inline chef-tip decision
+   under Cook Mode exists for this reason), momentum — starting the weekly ritual or
+   starting to cook should feel like one clear action, not a multi-step negotiation.
+2. **It should feel alive — like it has a soul, not like a form.** This is a tone goal for
+   *everything you design in this pass*, even though the specific proactive-messaging
+   features below are out of scope for now. Small, specific touches matter here: 小當家
+   reacting with real warmth to a cooking milestone, the presence indicator feeling like
+   a person is actually there rather than a status field, microcopy that sounds like a
+   chef talking to you and not an app labeling a button. If two otherwise-equal layouts
+   differ on which one feels more like "a friend in the kitchen" versus "a utility app,"
+   pick the former.
+
+Concrete interaction references Mike likes and wants reflected here: the cook-mode-style
+recipe screen in the Claude app (photo carousel, servings/unit controls, print/copy,
+clear "start cooking" action, step layout) — see the Recipe Detail section below — and
+swipe gestures for picking-from/dismissing a small set of suggested options rather than
+typing a reply.
+
 Core loop: the app knows the household's weekly meal plan, shopping list, and cookbook.
 Mike chats with 小當家 to tweak the plan, gets a weekly "ritual" (Sunday planning
 conversation), cooks from a teleprompter-style mode, and rates dishes afterward. A laptop
@@ -104,6 +130,18 @@ social media unprompted, like a friend sending a link. **This is real, but it's 
 backend capability (nothing today lets the brain start a conversation on its own), not a
 visual design question** — it's being treated as a separate future milestone, not part of
 this pass. Please don't design screens for it yet.
+
+## What we need out of this project
+
+The goal isn't a handful of inspirational sketches — it's a comprehensive,
+implementation-ready set of screens, flows, and a real design system (tokens +
+components), covering all 10 screens above, that gets handed back to a Claude Code
+session afterward to actually build in SwiftUI. Treat "would an engineer know exactly
+what to build from this" as the bar, not "does this look nice as a single screen."
+That means: settle the visual direction first (don't half-explore three directions and
+stop), then carry it consistently across every screen, including the ones that are just
+restyled rather than redesigned — a screen with no new interaction still needs the same
+level of finish as Recipe Detail or Cook Mode, not an afterthought.
 
 ## The codebase
 
