@@ -1,0 +1,40 @@
+<!-- @dsCard group="Spacing" -->
+<!doctype html>
+<html data-persona="xiaodangjia">
+<head><meta charset="utf-8"><title>Sous — Spacing &amp; radius</title>
+<style>
+  :root[data-persona="xiaodangjia"] { --sous-bg:#191410; --sous-ink:#F2E8DC; --sous-ink-dim:#A3927E; --sous-ink-faint:#766152; --sous-tint:#E85D2C; --sous-line: rgba(242,232,220,0.09); }
+  * { box-sizing: border-box; }
+  body { background: var(--sous-bg); color: var(--sous-ink); font-family: -apple-system, "PingFang TC", sans-serif; margin:0; padding:28px; }
+  h1 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  p.note { font-size: 12.5px; color: var(--sous-ink-dim); margin: 0 0 20px; max-width: 58ch; line-height: 1.5; }
+  .group { margin-bottom: 24px; }
+  .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--sous-ink-faint); margin-bottom: 10px; }
+  .row { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .bar { background: var(--sous-tint); height: 20px; }
+  .row .px { font-size: 11px; color: var(--sous-ink-dim); font-variant-numeric: tabular-nums; width: 70px; }
+  .radii { display: flex; gap: 14px; }
+  .radii .box { width: 64px; height: 64px; background: var(--sous-tint); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 10px; font-weight: 700; color: #fff3ec; }
+</style></head>
+<body>
+  <h1>Sous · Spacing &amp; radius</h1>
+  <p class="note">8pt-based spacing scale (iOS-standard). Radius scale is generous but not maximal — "softened," not full sticker-pop.</p>
+  <div class="group">
+    <div class="label">Spacing scale</div>
+    <div class="row"><div class="px">4</div><div class="bar" style="width:4px"></div></div>
+    <div class="row"><div class="px">8</div><div class="bar" style="width:8px"></div></div>
+    <div class="row"><div class="px">12</div><div class="bar" style="width:12px"></div></div>
+    <div class="row"><div class="px">16</div><div class="bar" style="width:16px"></div></div>
+    <div class="row"><div class="px">24</div><div class="bar" style="width:24px"></div></div>
+    <div class="row"><div class="px">32</div><div class="bar" style="width:32px"></div></div>
+  </div>
+  <div class="group">
+    <div class="label">Radius scale</div>
+    <div class="radii">
+      <div class="box" style="border-radius:10px;">sm·10</div>
+      <div class="box" style="border-radius:16px;">md·16</div>
+      <div class="box" style="border-radius:22px;">lg·22</div>
+      <div class="box" style="border-radius:999px;">pill</div>
+    </div>
+  </div>
+</body></html>

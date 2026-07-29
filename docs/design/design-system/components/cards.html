@@ -1,0 +1,36 @@
+<!-- @dsCard group="Components" -->
+<!doctype html>
+<html data-persona="xiaodangjia">
+<head><meta charset="utf-8"><title>Sous — Cards</title>
+<style>
+  :root[data-persona="xiaodangjia"] {
+    --sous-bg:#191410; --sous-surface:#241C17; --sous-surface-2:#2E2319; --sous-ink:#F2E8DC; --sous-ink-dim:#A3927E;
+    --sous-line: rgba(242,232,220,0.09); --sous-tint:#E85D2C; --sous-tint-ink:#FFF3EC; --sous-gold:#E8A23C;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--sous-bg); color: var(--sous-ink); font-family: -apple-system, "PingFang TC", sans-serif; margin:0; padding:28px; }
+  h1 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  p.note { font-size: 12.5px; color: var(--sous-ink-dim); margin: 0 0 20px; max-width: 56ch; line-height: 1.5; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .card { background: var(--sous-surface); border: 1px solid var(--sous-line); border-radius: 22px; padding: 16px; width: 220px; }
+  .display-lg { font-family: ui-rounded, -apple-system, "PingFang TC", sans-serif; font-weight: 800; font-size: 18px; margin: 8px 0 2px; }
+  .body-sm { font-size: 12px; color: var(--sous-ink-dim); margin: 0 0 12px; }
+  .tip { background: var(--sous-surface-2); border-left: 3px solid var(--sous-gold); border-radius: 10px; padding: 10px 12px; font-size: 11.5px; color: var(--sous-ink-dim); line-height: 1.5; }
+  .tip b { color: var(--sous-gold); }
+  .btn-primary { appearance:none; border:none; width: 100%; background: var(--sous-tint); color: var(--sous-tint-ink); font-weight: 700; font-size: 13px; padding: 11px; border-radius: 14px; margin-top: 10px; }
+</style></head>
+<body>
+  <h1>Sous · Cards</h1>
+  <p class="note">One card style throughout — surface color + hairline border, no drop shadows (dark ground makes shadows read muddy). Chef-tip callouts nest inside the same card as the instruction, never a separate section.</p>
+  <div class="row">
+    <div class="card">
+      <div class="display-lg">紅燒牛肉麵</div>
+      <div class="body-sm">今晚 · 已煮 5 次</div>
+      <button class="btn-primary">開始做菜 →</button>
+    </div>
+    <div class="card">
+      <div class="body-sm" style="margin-bottom:8px;">遠火慢烤 45 分鐘</div>
+      <div class="tip"><b>小當家秘訣：</b>蔗糖容易焦,最後幾分鐘多看著。</div>
+    </div>
+  </div>
+</body></html>

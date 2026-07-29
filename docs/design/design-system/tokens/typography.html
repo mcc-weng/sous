@@ -1,0 +1,34 @@
+<!-- @dsCard group="Type" -->
+<!doctype html>
+<html data-persona="xiaodangjia">
+<head><meta charset="utf-8"><title>Sous — Type scale</title>
+<style>
+  :root[data-persona="xiaodangjia"] {
+    --sous-bg: #191410; --sous-ink: #F2E8DC; --sous-ink-dim: #A3927E; --sous-ink-faint: #766152; --sous-line: rgba(242,232,220,0.09);
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--sous-bg); color: var(--sous-ink); font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", sans-serif; margin:0; padding:28px; }
+  h1 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  p.note { font-size: 12.5px; color: var(--sous-ink-dim); margin: 0 0 20px; max-width: 60ch; line-height: 1.5; }
+  .row { display: flex; align-items: baseline; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--sous-line); }
+  .row:last-child { border-bottom: none; }
+  .tag { font-size: 10.5px; color: var(--sous-ink-faint); width: 110px; flex: 0 0 auto; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+  .display-xl { font-family: ui-rounded, -apple-system, "PingFang TC", sans-serif; font-weight: 800; font-size: 25px; }
+  .display-lg { font-family: ui-rounded, -apple-system, "PingFang TC", sans-serif; font-weight: 800; font-size: 21px; }
+  .display-md { font-family: ui-rounded, -apple-system, "PingFang TC", sans-serif; font-weight: 700; font-size: 17px; }
+  .body-md { font-size: 14.5px; }
+  .body-sm { font-size: 12.5px; color: var(--sous-ink-dim); }
+  .caption { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--sous-ink-faint); }
+  .num { font-variant-numeric: tabular-nums; font-weight: 700; }
+</style></head>
+<body>
+  <h1>Sous · Type scale</h1>
+  <p class="note">Headers use <code>ui-rounded</code> (renders as SF Pro Rounded on-device) for the "軟化" warmth. Body copy uses the system stack with PingFang TC first — nearly all real UI copy is Traditional Chinese. Numbers (timers, quantities, servings) always use tabular figures so they don't shift width while counting.</p>
+  <div class="row"><div class="tag">Display XL · 25</div><div class="display-xl">紅燒牛肉麵</div></div>
+  <div class="row"><div class="tag">Display LG · 21</div><div class="display-lg">蒜香蔗糖烤肋排</div></div>
+  <div class="row"><div class="tag">Display MD · 17</div><div class="display-md">今晚吃這個 👇</div></div>
+  <div class="row"><div class="tag">Body · 14.5</div><div class="body-md">沒有蠔油也沒關係,用醬油、蒜末和蔗糖調出鹹香回甘的醬汁。</div></div>
+  <div class="row"><div class="tag">Body dim · 12.5</div><div class="body-sm">今晚 · 已煮 5 次</div></div>
+  <div class="row"><div class="tag">Caption</div><div class="caption">已煮 5 次 · milestone</div></div>
+  <div class="row"><div class="tag">Tabular nums</div><div class="num" style="font-size:22px;">45:00 → 44:59 → 08:31</div></div>
+</body></html>

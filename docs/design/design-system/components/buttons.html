@@ -1,0 +1,38 @@
+<!-- @dsCard group="Components" -->
+<!doctype html>
+<html data-persona="xiaodangjia">
+<head><meta charset="utf-8"><title>Sous — Buttons</title>
+<style>
+  :root[data-persona="xiaodangjia"] {
+    --sous-bg:#191410; --sous-surface:#241C17; --sous-surface-2:#2E2319; --sous-ink:#F2E8DC; --sous-ink-dim:#A3927E;
+    --sous-line: rgba(242,232,220,0.09); --sous-tint:#E85D2C; --sous-tint-ink:#FFF3EC;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--sous-bg); color: var(--sous-ink); font-family: -apple-system, "PingFang TC", sans-serif; margin:0; padding:28px; }
+  h1 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  p.note { font-size: 12.5px; color: var(--sous-ink-dim); margin: 0 0 20px; max-width: 56ch; line-height: 1.5; }
+  .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--sous-ink-dim); margin: 18px 0 10px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .btn { appearance: none; border: none; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+  .btn-primary { background: var(--sous-tint); color: var(--sous-tint-ink); font-weight: 700; font-size: 14.5px; padding: 13px 24px; border-radius: 16px; }
+  .btn-primary:disabled { opacity: .4; cursor: default; }
+  .btn-secondary { background: var(--sous-surface-2); border: 1px solid var(--sous-line); color: var(--sous-ink); font-weight: 700; font-size: 14.5px; padding: 12px 22px; border-radius: 16px; }
+  .btn-icon { background: var(--sous-surface-2); color: var(--sous-ink-dim); width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--sous-line); font-size: 15px; }
+</style></head>
+<body>
+  <h1>Sous · Buttons</h1>
+  <p class="note">Primary is the persona tint — one clear call to action per screen. Icon buttons are for utility actions (print, copy, unit toggle), never the primary path.</p>
+  <div class="label">Primary</div>
+  <div class="row">
+    <button class="btn btn-primary">開始做菜 →</button>
+    <button class="btn btn-primary" disabled>鎖定本週菜單</button>
+  </div>
+  <div class="label">Secondary</div>
+  <div class="row"><button class="btn btn-secondary">← 上一步</button></div>
+  <div class="label">Icon</div>
+  <div class="row">
+    <button class="btn btn-icon">⇄</button>
+    <button class="btn btn-icon">🖶</button>
+    <button class="btn btn-icon">⧉</button>
+  </div>
+</body></html>

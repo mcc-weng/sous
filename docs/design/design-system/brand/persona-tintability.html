@@ -1,0 +1,48 @@
+<!-- @dsCard group="Brand" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Sous — Persona tintability</title>
+<style>
+  [data-persona="xiaodangjia"] {
+    --sous-bg:#191410; --sous-surface:#241C17; --sous-surface-2:#2E2319; --sous-ink:#F2E8DC; --sous-ink-dim:#A3927E;
+    --sous-line: rgba(242,232,220,0.09); --sous-tint:#E85D2C; --sous-tint-ink:#FFF3EC; --sous-gold:#E8A23C; --sous-gold-ink:#3D2600;
+  }
+  [data-persona="placeholder-english"] {
+    --sous-bg:#12181C; --sous-surface:#1B242A; --sous-surface-2:#232F36; --sous-ink:#E7F0F2; --sous-ink-dim:#8FA6AE;
+    --sous-line: rgba(231,240,242,0.09); --sous-tint:#2B9C8F; --sous-tint-ink:#EAFFFB; --sous-gold:#D8B54C; --sous-gold-ink:#362700;
+  }
+  * { box-sizing: border-box; }
+  body { background: #0E0C0A; color: #F2E8DC; font-family: -apple-system, "PingFang TC", sans-serif; margin:0; padding:28px; }
+  h1 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  p.note { font-size: 12.5px; color: #A3927E; margin: 0 0 18px; max-width: 60ch; line-height: 1.5; }
+  .toggle-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .toggle-row button { font: inherit; font-size: 12.5px; font-weight: 700; padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(242,232,220,.15); background: #1B1512; color: #A3927E; cursor: pointer; }
+  .toggle-row button.on { background: #E85D2C; border-color: #E85D2C; color: #FFF6EF; }
+  .demo { background: var(--sous-bg); border-radius: 20px; padding: 20px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; transition: background .2s; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 6px 13px; border-radius: 999px; background: color-mix(in srgb, var(--sous-tint) 20%, var(--sous-surface)); color: var(--sous-gold); }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sous-gold); }
+  .chip { background: var(--sous-tint); color: var(--sous-tint-ink); font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: 999px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 800; color: var(--sous-gold-ink); background: var(--sous-gold); padding: 5px 10px 5px 8px; border-radius: 999px 6px 999px 6px; transform: rotate(-2deg); }
+  .btn { appearance:none; border:none; background: var(--sous-tint); color: var(--sous-tint-ink); font-weight: 700; font-size: 13px; padding: 11px 20px; border-radius: 16px; }
+</style></head>
+<body>
+  <h1>Sous · Persona tintability (live demo)</h1>
+  <p class="note">Same markup, same components — only <code>--sous-tint</code> / <code>--sous-gold</code> (and the neutrals around them) change per persona. 小當家 ships in v1; "placeholder" is a stand-in second persona proving the seam works, not a real one. This is the contract every screen must respect: no hardcoded persona colors, ever.</p>
+  <div class="toggle-row">
+    <button class="on" onclick="set('xiaodangjia', this)">小當家 · ember</button>
+    <button onclick="set('placeholder-english', this)">placeholder · teal</button>
+  </div>
+  <div class="demo" id="demo" data-persona="xiaodangjia">
+    <span class="pill"><span class="dot"></span>在廚房</span>
+    <span class="chip">今天想吃辣</span>
+    <span class="badge">🔥 已煮 5 次！</span>
+    <button class="btn">鎖定本週菜單</button>
+  </div>
+  <script>
+    function set(p, el) {
+      document.getElementById('demo').setAttribute('data-persona', p);
+      document.querySelectorAll('.toggle-row button').forEach(function(b){ b.classList.remove('on'); });
+      el.classList.add('on');
+    }
+  </script>
+</body></html>

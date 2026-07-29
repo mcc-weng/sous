@@ -1,0 +1,36 @@
+<!-- @dsCard group="Colors" -->
+<!doctype html>
+<html data-persona="xiaodangjia">
+<head><meta charset="utf-8"><title>Sous — Color tokens</title>
+<style>
+  :root[data-persona="xiaodangjia"] {
+    --sous-bg: #191410; --sous-surface: #241C17; --sous-surface-2: #2E2319;
+    --sous-ink: #F2E8DC; --sous-ink-dim: #A3927E; --sous-ink-faint: #766152;
+    --sous-line: rgba(242,232,220,0.09);
+    --sous-tint: #E85D2C; --sous-tint-ink: #FFF3EC;
+    --sous-gold: #E8A23C; --sous-gold-ink: #3D2600;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--sous-bg); color: var(--sous-ink); font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", sans-serif; margin:0; padding:28px; }
+  h1 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  p.note { font-size: 12.5px; color: var(--sous-ink-dim); margin: 0 0 20px; max-width: 56ch; line-height: 1.5; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; }
+  .swatch { width: 116px; }
+  .swatch .fill { height: 68px; border-radius: 14px; border: 1px solid var(--sous-line); margin-bottom: 7px; }
+  .swatch .name { font-size: 12px; font-weight: 700; }
+  .swatch .role { font-size: 10.5px; color: var(--sous-ink-faint); margin-bottom: 2px; }
+  .swatch .hex { font-size: 11px; color: var(--sous-ink-dim); font-variant-numeric: tabular-nums; }
+</style></head>
+<body>
+  <h1>Sous · Color tokens</h1>
+  <p class="note">Persona-tintable — see the "Persona tintability" card in Brand for the variable seam. Ground is a warm hue-biased near-black (dark-mode-first is a locked product decision, not a default).</p>
+  <div class="row">
+    <div class="swatch"><div class="role">background</div><div class="fill" style="background:var(--sous-bg)"></div><div class="name">Ground</div><div class="hex">#191410</div></div>
+    <div class="swatch"><div class="role">surface</div><div class="fill" style="background:var(--sous-surface)"></div><div class="name">Surface</div><div class="hex">#241C17</div></div>
+    <div class="swatch"><div class="role">surface</div><div class="fill" style="background:var(--sous-surface-2)"></div><div class="name">Surface 2</div><div class="hex">#2E2319</div></div>
+    <div class="swatch"><div class="role">text</div><div class="fill" style="background:var(--sous-ink)"></div><div class="name">Ink</div><div class="hex">#F2E8DC</div></div>
+    <div class="swatch"><div class="role">text</div><div class="fill" style="background:var(--sous-ink-dim)"></div><div class="name">Ink dim</div><div class="hex">#A3927E</div></div>
+    <div class="swatch"><div class="role">persona tint</div><div class="fill" style="background:var(--sous-tint)"></div><div class="name">Ember</div><div class="hex">#E85D2C</div></div>
+    <div class="swatch"><div class="role">highlight</div><div class="fill" style="background:var(--sous-gold)"></div><div class="name">Gold</div><div class="hex">#E8A23C</div></div>
+  </div>
+</body></html>

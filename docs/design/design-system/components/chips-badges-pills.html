@@ -1,0 +1,33 @@
+<!-- @dsCard group="Components" -->
+<!doctype html>
+<html data-persona="xiaodangjia">
+<head><meta charset="utf-8"><title>Sous — Chips, badges, pills</title>
+<style>
+  :root[data-persona="xiaodangjia"] {
+    --sous-bg:#191410; --sous-surface:#241C17; --sous-surface-2:#2E2319; --sous-ink:#F2E8DC; --sous-ink-dim:#A3927E;
+    --sous-line: rgba(242,232,220,0.09); --sous-tint:#E85D2C; --sous-tint-ink:#FFF3EC; --sous-gold:#E8A23C; --sous-gold-ink:#3D2600;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--sous-bg); color: var(--sous-ink); font-family: -apple-system, "PingFang TC", sans-serif; margin:0; padding:28px; }
+  h1 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+  p.note { font-size: 12.5px; color: var(--sous-ink-dim); margin: 0 0 20px; max-width: 58ch; line-height: 1.5; }
+  .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--sous-ink-dim); margin: 18px 0 10px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 6px 13px; border-radius: 999px; }
+  .pill-in { background: color-mix(in srgb, var(--sous-tint) 20%, var(--sous-surface)); color: var(--sous-gold); }
+  .pill-in .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sous-gold); }
+  .pill-out { background: var(--sous-surface); color: var(--sous-ink-dim); }
+  .chip { background: var(--sous-surface-2); border: 1px solid var(--sous-line); color: var(--sous-ink); font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: 999px; }
+  .chip.on { background: var(--sous-tint); border-color: var(--sous-tint); color: var(--sous-tint-ink); }
+  .badge-stamp { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 800; color: var(--sous-gold-ink); background: var(--sous-gold); padding: 5px 10px 5px 8px; border-radius: 999px 6px 999px 6px; transform: rotate(-2deg); }
+</style></head>
+<body>
+  <h1>Sous · Chips, badges, pills</h1>
+  <p class="note">Presence pill reads <code>copy_pack.presence_in/out</code> live. Milestone stamp is deliberately a little crooked — the one "sticker pop" moment in an otherwise restrained system, reserved for genuine milestones only (3rd/5th/every-10th cook).</p>
+  <div class="label">Presence</div>
+  <div class="row"><span class="pill pill-in"><span class="dot"></span>在廚房</span><span class="pill pill-out">外出中</span></div>
+  <div class="label">Chips</div>
+  <div class="row"><span class="chip">🛒 採買清單</span><span class="chip on">今天想吃辣</span><span class="chip">📖 食譜本</span></div>
+  <div class="label">Milestone badge</div>
+  <div class="row"><span class="badge-stamp">🔥 已煮 5 次！</span></div>
+</body></html>
