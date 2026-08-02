@@ -98,7 +98,7 @@ final class DesignTokensTests: XCTestCase {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd ios && xcodebuild test -project Sous.xcodeproj -scheme Sous -destination 'platform=iOS Simulator,name=iPhone 16 Pro' -only-testing:SousTests/DesignTokensTests 2>&1 | tail -30`
+Run: `cd ios && xcodebuild test -project Sous.xcodeproj -scheme Sous -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.2' -only-testing:SousTests/DesignTokensTests 2>&1 | tail -30`
 
 Expected: FAIL — `serifFontName`/`sansFontName` not defined.
 
@@ -146,7 +146,7 @@ func sansFontName(bundled: Bool) -> String {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cd ios && xcodebuild test -project Sous.xcodeproj -scheme Sous -destination 'platform=iOS Simulator,name=iPhone 16 Pro' -only-testing:SousTests/DesignTokensTests 2>&1 | tail -30`
+Run: `cd ios && xcodebuild test -project Sous.xcodeproj -scheme Sous -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.2' -only-testing:SousTests/DesignTokensTests 2>&1 | tail -30`
 
 Expected: PASS (4/4).
 
@@ -265,7 +265,7 @@ extension DesignTokensTests {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd ios && xcodebuild test -project Sous.xcodeproj -scheme Sous -destination 'platform=iOS Simulator,name=iPhone 16 Pro' -only-testing:SousTests/DesignTokensTests 2>&1 | tail -30`
+Run: `cd ios && xcodebuild test -project Sous.xcodeproj -scheme Sous -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.2' -only-testing:SousTests/DesignTokensTests 2>&1 | tail -30`
 
 Expected: FAIL — `FontBook` not defined.
 
@@ -309,7 +309,7 @@ enum FontBook {
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `cd ios && xcodebuild test -project Sous.xcodeproj -scheme Sous -destination 'platform=iOS Simulator,name=iPhone 16 Pro' -only-testing:SousTests/DesignTokensTests 2>&1 | tail -30`
+Run: `cd ios && xcodebuild test -project Sous.xcodeproj -scheme Sous -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.2' -only-testing:SousTests/DesignTokensTests 2>&1 | tail -30`
 
 Expected: PASS. If the font files aren't in place yet, this still passes (it's
 asserting consistency between `FontBook` and the real registry, not that the fonts
@@ -359,7 +359,7 @@ functionality (Sign in with Apple flow) unchanged — this task touches layout/s
 only, not `AuthView`'s auth logic.
 
 - [ ] Restyle per the reference above.
-- [ ] Build: `cd ios && xcodebuild build -project Sous.xcodeproj -scheme Sous -destination 'platform=iOS Simulator,name=iPhone 16 Pro' 2>&1 | tail -20` — expect `BUILD SUCCEEDED`.
+- [ ] Build: `cd ios && xcodebuild build -project Sous.xcodeproj -scheme Sous -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=26.2' 2>&1 | tail -20` — expect `BUILD SUCCEEDED`.
 - [ ] Run full test suite (`-only-testing` omitted) to confirm no regressions: expect the same pass count as before this task, plus Tasks 1–3's new tests.
 - [ ] Commit: `git commit -m "feat(ios): restyle Auth screen to paper design"`
 
