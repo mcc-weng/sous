@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@200;300;400;500&family=Noto+Serif+TC:wght@300;400;500;600&display=swap" rel="stylesheet"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#E4E0D8;font-family:"Noto Sans TC",system-ui,sans-serif}
+a{color:#14120F}a:hover{color:#000}
+.sec{padding:38px 44px 32px;border-bottom:1px solid rgba(0,0,0,.1)}
+.shd{display:flex;align-items:baseline;gap:12px;margin:0 0 6px;flex-wrap:wrap}
+.sid{font:700 10px ui-monospace,Menlo,monospace;letter-spacing:.06em;padding:4px 8px;background:#22201C;color:#F2EDE3;border-radius:3px;text-decoration:none}
+.sname{font:700 15px/1.2 system-ui,sans-serif;color:#22201C}
+.snote{max-width:940px;font:12.5px/1.75 system-ui,sans-serif;color:rgba(0,0,0,.62);margin:0 0 22px}
+.row{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.cap{font:600 10px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:rgba(0,0,0,.62);margin:0 0 7px}
+.capn{font:11px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.66);max-width:402px;margin:9px 0 0}
+@keyframes sp{to{transform:rotate(360deg)}}
+@keyframes crossOut{0%{opacity:1;filter:none}100%{opacity:0;filter:brightness(.28) saturate(.4)}}
+@keyframes crossIn{0%{opacity:0}100%{opacity:1}}
+@keyframes crossGlow{0%{opacity:0}100%{opacity:1}}
+@keyframes dealThrow{0%{transform:none;opacity:1}45%{transform:translate(310px,-30px) rotate(14deg);opacity:0}46%{transform:translate(310px,-30px) rotate(14deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes dealSettle{0%{transform:rotate(3deg) translateY(16px) scale(.97)}100%{transform:rotate(1.5deg) translateY(7px) scale(1)}}
+@keyframes ruleOut{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+@keyframes coverOut{0%{opacity:1;filter:blur(6px)}100%{opacity:0;filter:blur(13px)}}
+@keyframes verdictIn{0%{opacity:0;transform:scale(.94);letter-spacing:.4em}100%{opacity:1;transform:none;letter-spacing:.28em}}
+@keyframes fadeUp{0%{opacity:0;transform:translateY(5px)}100%{opacity:1;transform:none}}
+@keyframes slipIn{0%{opacity:0;transform:translateY(10px);box-shadow:0 0 0 rgba(34,32,28,0)}100%{opacity:1;transform:none;box-shadow:1px 2px 0 rgba(34,32,28,.1)}}
+</style></helmet>
+
+<section class="sec" id="v0">
+<div class="shd"><a class="sid" href="#v0">SOUS · M3</a><span class="sname">小當家 — 書與灶 · the settled system</span></div>
+<p class="snote"><b>The book you own, and the stove you stand at.</b> Everything is a page in a finely printed cookbook — <code>#EDEAE2</code> stock, <code>#22201C</code> ink, one seal red <code>#9B2C1E</code> per page, centred labels tracked wide, generous margins, hairline rules, Noto Serif TC for names and verdicts. The <b>only</b> dark screens are the ones where something is running and your hands are busy: the stove steps, the timers, 上菜. Crossing happens once per session and both directions are designed — 開始做菜 dims the page, 上菜 prints the night back into it.<br><br><b>Talking to him is not a chat app.</b> You ask from the page you're on and his answer is written into that page (邊欄); anything that belongs to no page lands in a single 便條 thread. He is never "online" — he wrote this book, and he answers.</p>
+</section>
+
+<section class="sec" id="vA">
+<div class="shd"><a class="sid" href="#vA">A</a><span class="sname">進場 — 扉頁 · 廚房 · 便條</span></div>
+<p class="snote">Auth is a title page. Kitchen Counter is the book open at today's dated spread. The 便條 thread is the inbox for everything not attached to a recipe.</p>
+<div class="row">
+
+<div><p class="cap">扉頁 · Auth</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 40px;text-align:center">
+    <div style="width:40px;height:40px;background:#9B2C1E;color:#F2EDE3;display:flex;align-items:center;justify-content:center;font-size:18px">當</div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.62em;color:#9B2C1E;margin-top:30px">私　廚　手　記</div>
+    <div style="font-size:38px;font-weight:400;line-height:1.5;margin-top:22px;letter-spacing:.05em">你的私廚<br>在口袋裡</div>
+    <div style="width:24px;height:1px;background:rgba(34,32,28,.3);margin:24px 0"></div>
+    <div style="font-size:14px;font-weight:400;line-height:2.2;color:#4E4A42;text-wrap:pretty">小當家會記住你家的口味、<br>排好這一週,<br>然後在爐邊陪你把它煮出來。</div>
+  </div>
+  <div style="padding:0 40px">
+    <button style="width:100%;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;letter-spacing:.32em;color:#22201C;background:none;border:1px solid #22201C;padding:16px;cursor:pointer">以 Apple 帳號登入</button>
+    <div style="text-align:center;margin-top:18px;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.16em;line-height:2;color:#5E5A52">我們只存你家的口味與菜單</div>
+  </div>
+</div>
+</x-import>
+<p class="capn">A title page, not a marketing screen: seal, tracked subtitle, name, rule, promise. The outlined CTA is the F4 structure — ink-filled buttons are saved for the one irreversible action on each screen.</p></div>
+
+<div><p class="cap">廚房 · Kitchen Counter</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 34px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>我們家的廚房</span><span>八月二日</span></div>
+  <div style="margin:14px 34px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="text-align:center;padding:26px 34px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#9B2C1E">今　晚</div>
+    <div style="font-size:31px;font-weight:400;line-height:1.4;margin-top:16px;letter-spacing:.04em">蔥香雞腿飯</div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.22em;color:#4E4A42;margin-top:13px">四十分 · 快手 · 雞腿前一晚退冰</div>
+  </div>
+  <div style="margin:22px 34px 0;height:178px;background:repeating-linear-gradient(115deg,rgba(34,32,28,.06),rgba(34,32,28,.06) 7px,transparent 7px,transparent 15px);display:flex;align-items:center;justify-content:center;font:10px ui-monospace,monospace;letter-spacing:.16em;color:#6C685F">料理照片</div>
+
+  <div style="margin:20px 34px 0">
+    <button style="width:100%;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;font-weight:500;letter-spacing:.34em;color:#EDEAE2;background:#22201C;border:none;padding:16px;cursor:pointer">開始做菜</button>
+    <div style="text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.14em;color:#5E5A52;margin-top:11px">進入灶前 · 畫面會暗下來</div>
+  </div>
+
+  <div style="margin:26px 34px 0;padding:16px 18px;background:#F7F4EC;border-left:2px solid #9B2C1E;box-shadow:1px 2px 0 rgba(34,32,28,.09)">
+    <div style="display:flex;align-items:baseline;gap:11px">
+      <span style="width:22px;height:22px;flex:none;background:#9B2C1E;color:#F2EDE3;font-size:11px;display:flex;align-items:center;justify-content:center">當</span>
+      <div style="font-size:14px;font-style:italic;line-height:2;text-wrap:pretty">「雞腿已經退好冰了吧?今晚我們把皮煎得脆一點。」</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:13px;font-family:'Noto Sans TC',sans-serif">
+      <button style="font-size:11.5px;letter-spacing:.08em;color:#22201C;background:none;border:1px solid rgba(34,32,28,.42);padding:8px 14px;cursor:pointer">退好了</button>
+      <button style="font-size:11.5px;letter-spacing:.08em;color:#4E4A42;background:none;border:1px solid rgba(34,32,28,.22);padding:8px 14px;cursor:pointer">想換一道</button>
+    </div>
+  </div>
+
+  <div style="margin:26px 34px 0;padding-top:18px;border-top:1px solid rgba(34,32,28,.2)">
+    <div style="text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#5E5A52">想吃什麼</div>
+    <div style="display:flex;align-items:center;gap:15px;margin-top:16px">
+      <div style="width:54px;height:54px;flex:none;background:repeating-linear-gradient(115deg,rgba(34,32,28,.08),rgba(34,32,28,.08) 6px,transparent 6px,transparent 13px)"></div>
+      <div style="flex:1"><div style="font-size:17px;font-weight:400">滑一下,我記著</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.14em;color:#4E4A42;margin-top:6px">今天十二張新牌 · 收藏五道</div></div>
+      <span style="color:#9B2C1E;font-size:15px">→</span>
+    </div>
+  </div>
+
+  <div style="display:flex;margin:24px 34px 0;border-top:1px solid rgba(34,32,28,.2);border-bottom:1px solid rgba(34,32,28,.2);font-family:'Noto Sans TC',sans-serif">
+    <button style="flex:1;font-size:11px;letter-spacing:.18em;color:#4E4A42;background:none;border:none;border-right:1px solid rgba(34,32,28,.14);padding:16px 0;cursor:pointer">本週</button>
+    <button style="flex:1;font-size:11px;letter-spacing:.18em;color:#4E4A42;background:none;border:none;border-right:1px solid rgba(34,32,28,.14);padding:16px 0;cursor:pointer">採買 <span style="color:#9B2C1E">6</span></button>
+    <button style="flex:1;font-size:11px;letter-spacing:.18em;color:#4E4A42;background:none;border:none;border-right:1px solid rgba(34,32,28,.14);padding:16px 0;cursor:pointer">食譜本</button>
+    <button style="flex:1;font-size:11px;letter-spacing:.18em;color:#4E4A42;background:none;border:none;padding:16px 0;cursor:pointer">便條 <span style="color:#9B2C1E">2</span></button>
+  </div>
+</div>
+</x-import>
+<p class="capn">Dated running head, one plate centred, one instruction, his note in red, then the deck and the four destinations as a ruled footer. 便條 carries an unread count — that's the whole notification surface.</p></div>
+
+<div><p class="cap">便條 · the one thread</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:11px;padding:10px 32px 0">
+    <span style="width:26px;height:26px;flex:none;background:#9B2C1E;color:#F2EDE3;font-size:13px;display:flex;align-items:center;justify-content:center">當</span>
+    <div style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52">與小當家的往來</div>
+    <span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.2em;color:#5E5A52">關閉</span>
+  </div>
+  <div style="margin:14px 32px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="flex:1;min-height:0;padding:22px 32px 0;display:flex;flex-direction:column;gap:18px">
+    <div style="text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:9.5px;letter-spacing:.3em;color:#5E5A52">八月二日</div>
+
+    <div style="background:#F7F4EC;padding:16px 18px;box-shadow:1px 2px 0 rgba(34,32,28,.1);border-left:2px solid #9B2C1E">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:9.5px;letter-spacing:.28em;color:#9B2C1E">本週儀式</div>
+      <div style="font-size:14.5px;font-style:italic;line-height:2;margin-top:9px;text-wrap:pretty">「該排下週的菜單了。給我十二張牌的時間就好 —— 或者你想用寫的也行。」</div>
+      <div style="display:flex;gap:8px;margin-top:14px;font-family:'Noto Sans TC',sans-serif">
+        <button style="flex:1;font-size:12px;font-weight:500;letter-spacing:.2em;color:#EDEAE2;background:#22201C;border:none;padding:12px;cursor:pointer">開始滑牌</button>
+        <button style="flex:1;font-size:12px;letter-spacing:.2em;color:#22201C;background:none;border:1px solid rgba(34,32,28,.34);padding:12px;cursor:pointer">用寫的</button>
+      </div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:9.5px;letter-spacing:.22em;color:#5E5A52;margin-top:12px;text-align:right">小當家 · 週日 19:30</div>
+    </div>
+
+    <div style="align-self:flex-end;max-width:78%;border:1px solid rgba(34,32,28,.28);padding:13px 16px">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:13.5px;font-weight:300;line-height:1.85;color:#3A362F">週四我不在家,別排我的份</div>
+    </div>
+
+    <div style="background:#F7F4EC;padding:16px 18px;box-shadow:1px 2px 0 rgba(34,32,28,.1);border-left:2px solid #9B2C1E">
+      <div style="font-size:14.5px;font-style:italic;line-height:2;text-wrap:pretty">「記下了。週四我排一人份的快手菜。」</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(34,32,28,.16)">
+        <span style="font-family:'Noto Sans TC',sans-serif;font-size:9.5px;letter-spacing:.24em;color:#9B2C1E">已修改</span>
+        <span style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:11.5px;color:#4E4A42">本週菜單 · 週四</span>
+        <span style="color:#9B2C1E">→</span>
+      </div>
+    </div>
+
+    <div style="background:#F7F4EC;padding:15px 18px;box-shadow:1px 2px 0 rgba(34,32,28,.1);border-left:2px solid #9B2C1E">
+      <div style="font-size:14px;font-style:italic;line-height:1.95;text-wrap:pretty">「醬油快沒了吧?要的話我加進清單。」</div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:9.5px;letter-spacing:.22em;color:#5E5A52;margin-top:11px;text-align:right">昨天</div>
+    </div>
+  </div>
+
+  <div style="padding:18px 32px 0">
+    <div style="display:flex;align-items:center;gap:12px;border-top:1px solid rgba(34,32,28,.2);padding-top:14px">
+      <span style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;color:#5E5A52">寫給小當家…</span>
+      <span style="color:#9B2C1E;font-size:15px">↑</span>
+    </div>
+  </div>
+</div>
+</x-import>
+<p class="capn">His slips are tinted with a red edge and signed; yours are plain outlined and unsigned. Anything that changed something carries a link to what changed. No avatars repeated down the thread, no online dot.</p></div>
+
+</div>
+</section>
+
+<section class="sec" id="vB">
+<div class="shd"><a class="sid" href="#vB">B</a><span class="sname">本週儀式 — 滑牌版 · 對話版 · 鎖定</span></div>
+<p class="snote">Both models on paper now. The deck is loose printed cards on a desk; the written ritual is correspondence with narrated waiting; both end at the same 鎖定 page. Drag the card, or use the ruled buttons — swipe through four to reach the lock.</p>
+<div class="row">
+
+<div><p class="cap">滑牌 · drag me</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:hidden;position:relative;background:#E7E2D8;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 30px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>本週儀式</span><span>關閉</span></div>
+  <div style="padding:16px 30px 0">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.24em;color:#4E4A42"><span>已排 {{ rFilledCn }} / 五 天</span><span>還剩 {{ rLeftCn }} 天</span></div>
+    <div style="margin-top:11px;height:1px;background:rgba(34,32,28,.2);position:relative"><div style="position:absolute;left:0;top:0;height:1px;background:#9B2C1E;width:{{ rPct }};transition:width .3s"></div></div>
+  </div>
+
+  <div style="flex:1;min-height:0;margin:18px 24px 0;position:relative">
+    <sc-if value="{{ r2.has }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;transform:rotate(1.5deg) translateY(7px);background:#DED7C8;box-shadow:0 8px 20px rgba(34,32,28,.14)"></div></sc-if>
+    <sc-if value="{{ r1.has }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;transform:rotate(-.9deg) translateY(3px);background:#E9E3D6;box-shadow:0 8px 20px rgba(34,32,28,.12)"></div></sc-if>
+    <sc-if value="{{ r0.has }}" hint-placeholder-val="{{ true }}">
+      <div onPointerDown="{{ rStart }}" onPointerMove="{{ rMove }}" onPointerUp="{{ rEnd }}" style="position:absolute;inset:0;background:#F7F4EC;box-shadow:0 16px 36px rgba(34,32,28,.2);overflow:hidden;cursor:grab;touch-action:none;transform:{{ rTf }};transition:{{ rTr }};display:flex;flex-direction:column">
+        <div style="padding:20px 24px 0;display:flex;align-items:baseline;justify-content:space-between;font-family:'Noto Sans TC',sans-serif">
+          <span style="font-size:10px;letter-spacing:.42em;color:#9B2C1E">{{ r0.day }}</span>
+          <sc-if value="{{ r0.updated }}" hint-placeholder-val="{{ true }}"><span style="font-size:10px;letter-spacing:.22em;color:#5E5A52">已依「沒有蝦」改過</span></sc-if>
+        </div>
+        <div style="margin:16px 24px 0;height:38%;background:repeating-linear-gradient(115deg,rgba(34,32,28,.07),rgba(34,32,28,.07) 7px,transparent 7px,transparent 15px);display:flex;align-items:center;justify-content:center;font:10px ui-monospace,monospace;letter-spacing:.16em;color:#6C685F">料理照片</div>
+        <div style="padding:20px 24px 0">
+          <div style="font-size:28px;font-weight:400;line-height:1.36;letter-spacing:.03em">{{ r0.dish }}</div>
+          <div style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.2em;color:#4E4A42;margin-top:12px">{{ r0.meta }}</div>
+          <div style="width:22px;height:1px;background:rgba(34,32,28,.3);margin:15px 0"></div>
+          <div style="font-size:13.5px;font-style:italic;line-height:2;color:#3A362F;text-wrap:pretty">{{ r0.line }}</div>
+        </div>
+        <sc-if value="{{ noteOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;right:0;bottom:0;background:#EDEAE2;border-top:2px solid #9B2C1E;padding:16px 22px 18px">
+            <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.3em;color:#9B2C1E">但是…</div>
+            <div style="margin-top:12px;border-bottom:1px solid rgba(34,32,28,.34);padding-bottom:9px;font-size:16px">沒有蝦<span style="color:#9B2C1E">|</span></div>
+            <div style="display:flex;gap:8px;margin-top:13px;font-family:'Noto Sans TC',sans-serif;flex-wrap:wrap">
+              <span style="font-size:11px;color:#4E4A42;border:1px solid rgba(34,32,28,.24);padding:7px 11px">辣一點</span>
+              <span style="font-size:11px;color:#4E4A42;border:1px solid rgba(34,32,28,.24);padding:7px 11px">份量少一半</span>
+              <span style="font-size:11px;color:#4E4A42;border:1px solid rgba(34,32,28,.24);padding:7px 11px">換更快的</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:14px;font-family:'Noto Sans TC',sans-serif">
+              <button onClick="{{ closeNote }}" style="flex:0 0 78px;font-size:11.5px;letter-spacing:.16em;color:#4E4A42;background:none;border:1px solid rgba(34,32,28,.26);padding:11px;cursor:pointer">取消</button>
+              <button onClick="{{ closeNote }}" style="flex:1;font-size:12px;font-weight:500;letter-spacing:.2em;color:#EDEAE2;background:#22201C;border:none;padding:11px;cursor:pointer">交給小當家改</button>
+            </div>
+            <div style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;line-height:1.85;color:#5E5A52;margin-top:11px;text-wrap:pretty">不用等 —— 牌繼續發,改好了它會再出現一次。</div>
+          </div>
+        </sc-if>
+        <div style="position:absolute;top:56px;left:22px;font-size:20px;letter-spacing:.26em;color:#9B2C1E;border:2px solid #9B2C1E;padding:6px 12px;transform:rotate(-12deg);opacity:{{ rLike }}">排入</div>
+        <div style="position:absolute;top:56px;right:22px;font-size:20px;letter-spacing:.26em;color:#22201C;border:2px solid #22201C;padding:6px 12px;transform:rotate(12deg);opacity:{{ rNope }}">換道</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ rDone }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;background:#F7F4EC;box-shadow:0 16px 36px rgba(34,32,28,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;text-align:center">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#9B2C1E">五天都排好了</div>
+        <div style="font-size:27px;font-weight:400;line-height:1.5">這一週<br>交給我</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:300;line-height:2;color:#4E4A42;text-wrap:pretty">鎖定之後我把採買清單寫好,週三前提醒你退冰。</div>
+        <button style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:500;letter-spacing:.34em;color:#EDEAE2;background:#22201C;border:none;padding:14px 30px;cursor:pointer">鎖　定</button>
+        <button onClick="{{ rReset }}" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:.2em;color:#5E5A52;background:none;border:none;cursor:pointer">再排一次</button>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="display:flex;margin:20px 24px 0;border-top:1px solid rgba(34,32,28,.22);border-bottom:1px solid rgba(34,32,28,.22);font-family:'Noto Sans TC',sans-serif">
+    <button onClick="{{ rNo }}" style="flex:1;font-size:11.5px;letter-spacing:.2em;color:#4E4A42;background:none;border:none;border-right:1px solid rgba(34,32,28,.22);padding:17px 0;cursor:pointer">換一道</button>
+    <button onClick="{{ openNote }}" style="flex:0 0 78px;font-size:11.5px;letter-spacing:.2em;color:#4E4A42;background:none;border:none;border-right:1px solid rgba(34,32,28,.22);padding:17px 0;cursor:pointer">但是…</button>
+    <button onClick="{{ rYes }}" style="flex:1;font-size:11.5px;font-weight:500;letter-spacing:.2em;color:#9B2C1E;background:none;border:none;padding:17px 0;cursor:pointer">排入這天</button>
+  </div>
+  <div style="text-align:center;padding:13px 30px 0;font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:.2em;color:#5E5A52">右滑排入 · 左滑換道 · 上滑補一句</div>
+</div>
+</x-import>
+<p class="capn">Dealing, not swiping. The tray is one hairline that fills seal-red; 但是… docks a note onto the card and the deck keeps moving. Stamps rotate in as you drag.</p></div>
+
+<div><p class="cap">對話版 · 等待</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:11px;padding:10px 32px 0">
+    <span style="width:26px;height:26px;flex:none;background:#9B2C1E;color:#F2EDE3;font-size:13px;display:flex;align-items:center;justify-content:center">當</span>
+    <div style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52">本週儀式 · 第一題 / 二</div>
+    <span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.2em;color:#5E5A52">取消</span>
+  </div>
+  <div style="margin:14px 32px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="flex:1;min-height:0;padding:22px 32px 0;display:flex;flex-direction:column;gap:18px">
+    <div style="background:#F7F4EC;padding:16px 18px;box-shadow:1px 2px 0 rgba(34,32,28,.1);border-left:2px solid #9B2C1E">
+      <div style="font-size:14.5px;font-style:italic;line-height:2;text-wrap:pretty">「下週有什麼想吃的、或什麼一定不要?先跟我說,再讓我排。」</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;font-family:'Noto Sans TC',sans-serif">
+      <span style="font-size:11.5px;color:#22201C;border:1px solid rgba(34,32,28,.42);padding:8px 13px">想吃辣</span>
+      <span style="font-size:11.5px;color:#4E4A42;border:1px solid rgba(34,32,28,.22);padding:8px 13px">清淡一點</span>
+      <span style="font-size:11.5px;color:#4E4A42;border:1px solid rgba(34,32,28,.22);padding:8px 13px">用完冰箱</span>
+      <span style="font-size:11.5px;color:#4E4A42;border:1px solid rgba(34,32,28,.22);padding:8px 13px">你決定</span>
+    </div>
+    <div style="align-self:flex-end;max-width:78%;border:1px solid rgba(34,32,28,.28);padding:13px 16px">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:13.5px;font-weight:300;line-height:1.85;color:#3A362F">想吃辣,而且週四我不在</div>
+    </div>
+
+    <div style="border:1px solid rgba(34,32,28,.26);padding:18px">
+      <div style="display:flex;align-items:center;gap:11px">
+        <span style="width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(155,44,30,.3);border-top-color:#9B2C1E;animation:sp 1s linear infinite"></span>
+        <span style="font-size:16px;font-weight:400">{{ narration }}</span>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:16px"><div style="flex:1;height:1px;background:#9B2C1E"></div><div style="flex:1;height:1px;background:#9B2C1E"></div><div style="flex:1;height:1px;background:rgba(34,32,28,.2)"></div></div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:11.5px;font-weight:300;line-height:1.95;color:#4E4A42;margin-top:14px;text-wrap:pretty">大概還要兩分鐘。你可以先去忙 —— 排好我會放進便條通知你。</div>
+      <button style="width:100%;margin-top:14px;font-family:'Noto Sans TC',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#4E4A42;background:none;border:1px solid rgba(34,32,28,.26);padding:12px;cursor:pointer">先離開,好了通知我</button>
+    </div>
+  </div>
+
+  <div style="padding:18px 32px 0">
+    <div style="display:flex;align-items:center;gap:12px;border-top:1px solid rgba(34,32,28,.2);padding-top:14px">
+      <span style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;color:#5E5A52">還想補什麼…</span>
+      <span style="color:#9B2C1E;font-size:15px">↑</span>
+    </div>
+  </div>
+</div>
+</x-import>
+<p class="capn">The wait is a bordered field on the page, not a spinner: narrated stage, three-part rule, honest estimate, and permission to leave — with the promise landing in 便條.</p></div>
+
+<div><p class="cap">鎖定 · the week is set</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 36px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>下週菜單</span><span>八月三日 — 九日</span></div>
+  <div style="margin:14px 36px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="text-align:center;padding:30px 36px 0">
+    <div style="width:34px;height:34px;background:#9B2C1E;color:#F2EDE3;display:inline-flex;align-items:center;justify-content:center;font-size:16px">當</div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#9B2C1E;margin-top:22px">已　鎖　定</div>
+    <div style="font-size:29px;font-weight:400;line-height:1.55;margin-top:18px;letter-spacing:.04em">這一週<br>我來安排</div>
+  </div>
+
+  <div style="margin:30px 36px 0;padding-top:18px;border-top:1px solid rgba(34,32,28,.2)">
+    <div style="display:flex;align-items:baseline;gap:14px;padding:11px 0"><span style="font-size:14px;color:#9B2C1E;width:18px">一</span><span style="flex:1;font-size:14.5px">番茄牛肉燉飯(隔夜)</span></div>
+    <div style="display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid rgba(34,32,28,.1)"><span style="font-size:14px;color:#9B2C1E;width:18px">三</span><span style="flex:1;font-size:14.5px">麻婆豆腐</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.18em;color:#5E5A52">已更新</span></div>
+    <div style="display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid rgba(34,32,28,.1)"><span style="font-size:14px;color:#9B2C1E;width:18px">四</span><span style="flex:1;font-size:14.5px">蒜香蔗糖烤肋排</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.18em;color:#5E5A52">新菜</span></div>
+    <div style="display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid rgba(34,32,28,.1)"><span style="font-size:14px;color:#9B2C1E;width:18px">五</span><span style="flex:1;font-size:14.5px">韓式辣炒年糕</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.18em;color:#5E5A52">新菜</span></div>
+    <div style="display:flex;align-items:baseline;gap:14px;padding:11px 0;border-top:1px solid rgba(34,32,28,.1);border-bottom:1px solid rgba(34,32,28,.2)"><span style="font-size:14px;color:#9B2C1E;width:18px">六</span><span style="flex:1;font-size:14.5px">番茄牛肉燉飯</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.18em;color:#5E5A52">多煮一份</span></div>
+  </div>
+
+  <div style="margin:24px 36px 0;padding:16px 18px;background:#F7F4EC;border-left:2px solid #9B2C1E;box-shadow:1px 2px 0 rgba(34,32,28,.09)">
+    <div style="font-size:14.5px;font-style:italic;line-height:2;text-wrap:pretty">「放心去過你的一週 —— 剩下的我記著。」</div>
+  </div>
+
+  <div style="margin:26px 36px 0">
+    <button style="width:100%;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;font-weight:500;letter-spacing:.34em;color:#EDEAE2;background:#22201C;border:none;padding:16px;cursor:pointer">看採買清單 · 十四項</button>
+    <button style="width:100%;margin-top:10px;font-family:'Noto Sans TC',sans-serif;font-size:12px;letter-spacing:.28em;color:#4E4A42;background:none;border:1px solid rgba(34,32,28,.26);padding:14px;cursor:pointer">回廚房</button>
+  </div>
+</div>
+</x-import>
+<p class="capn">The celebration is a printed page with a seal at the top — the week as a table of contents. Restraint carries more weight here than a glow ever did.</p></div>
+
+</div>
+</section>
+
+<section class="sec" id="vC">
+<div class="shd"><a class="sid" href="#vC">C</a><span class="sname">做菜 — 備料(紙) · 灶前(暗) · 上菜(暗) · 講評(紙)</span></div>
+<p class="snote">The one crossing. 備料 is still the book — you're reading a list at the counter. The moment the first step starts, the page dims to the stove: warm black, brass, light pooled where the work is. 上菜 is the last dark screen and its copy already points home. Then the night is printed into the book.</p>
+<div class="row">
+
+<div><p class="cap">備料 · still paper</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 34px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>✕　蔥香雞腿飯</span><span>{{ servLabel }}</span></div>
+  <div style="margin:14px 34px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+  <div style="text-align:center;padding:24px 34px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#9B2C1E">備　料</div>
+    <div style="font-size:24px;font-weight:400;line-height:1.5;margin-top:16px">先把東西都拿出來</div>
+  </div>
+  <div style="flex:1;min-height:0;padding:22px 34px 0">
+    <sc-for list="{{ ings }}" as="ing" hint-placeholder-count="5">
+      <div onClick="{{ ing.toggle }}" style="display:flex;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14);cursor:pointer;opacity:{{ ing.op }};min-height:56px">
+        <span style="width:24px;height:24px;flex:none;border:1px solid {{ ing.line }};background:{{ ing.fill }};color:#F2EDE3;font-size:13px;display:flex;align-items:center;justify-content:center">{{ ing.mark }}</span>
+        <span style="flex:1;font-size:16px;text-decoration:{{ ing.deco }}">{{ ing.name }}</span>
+        <span style="font-size:14px;color:#4E4A42;font-variant-numeric:tabular-nums">{{ ing.qty }}</span>
+      </div>
+    </sc-for>
+  </div>
+  <div style="padding:20px 34px 0">
+    <button style="width:100%;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;font-weight:500;letter-spacing:.34em;color:#EDEAE2;background:#22201C;border:none;padding:16px;cursor:pointer">開始烹飪</button>
+    <div style="text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.14em;color:#5E5A52;margin-top:11px">進入灶前 · 畫面會暗下來</div>
+  </div>
+</div>
+</x-import>
+<p class="capn">Tap to check. Quantities already scaled to the servings set on the recipe page. The warning before the crossing appears twice in the app and is worded the same both times.</p></div>
+
+<div><p class="cap">灶前 · dark, live</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;overflow:hidden;position:relative;background:#0C0A09;color:#F4EFE6;font-family:'Noto Sans TC',sans-serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="position:absolute;left:-16%;right:-16%;bottom:-32%;height:62%;background:radial-gradient(50% 58% at 50% 100%,rgba(201,138,62,.2),transparent 68%);filter:blur(16px);pointer-events:none"></div>
+  <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding:8px 28px 16px;font-size:10.5px;letter-spacing:.26em;color:#A49D93"><span>✕</span><span>蔥香雞腿飯</span><span>全部步驟</span></div>
+  <div style="position:relative;display:flex;gap:7px;padding:0 28px 26px">
+    <sc-for list="{{ progBars }}" as="b" hint-placeholder-count="4"><div style="flex:1;height:1px;background:{{ b.bg }}"></div></sc-for>
+  </div>
+
+  <div style="position:relative;flex:1;min-height:0;padding:0 28px;display:flex;flex-direction:column">
+    <div style="font-size:10px;letter-spacing:.42em;color:#C98A3E">步驟 {{ stepNum }} / 四</div>
+    <sc-if value="{{ prevStep }}" hint-placeholder-val="{{ true }}">
+      <div style="font-size:15px;font-weight:200;line-height:1.65;color:#8B857C;margin-top:18px">{{ prevStep }}</div>
+    </sc-if>
+    <div style="font-family:'Noto Serif TC',serif;font-size:26px;font-weight:300;line-height:1.62;margin-top:14px;text-wrap:pretty">{{ stepText }}</div>
+    <sc-if value="{{ stepTip }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top:16px;padding-left:14px;border-left:1px solid #C98A3E;font-size:13px;font-weight:200;line-height:1.95;color:#DCC59C;text-wrap:pretty"><span style="font-size:10px;letter-spacing:.28em;color:#C98A3E">小當家眉批　</span>{{ stepTip }}</div>
+    </sc-if>
+    <sc-if value="{{ nextStep }}" hint-placeholder-val="{{ true }}">
+      <div style="font-size:15px;font-weight:200;line-height:1.65;color:#78736B;margin-top:18px">{{ nextStep }}</div>
+    </sc-if>
+
+    <div style="display:flex;align-items:center;gap:22px;margin-top:26px">
+      <div onClick="{{ toggleTimer }}" style="width:118px;height:118px;flex:none;border-radius:50%;background:conic-gradient(#C98A3E {{ ringDeg }},rgba(244,239,230,.12) 0);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <div style="width:104px;height:104px;border-radius:50%;background:#0C0A09;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <span style="font-family:'Noto Serif TC',serif;font-size:26px;font-weight:300;font-variant-numeric:tabular-nums">{{ timer }}</span>
+          <span style="font-size:10px;letter-spacing:.26em;color:#A49D93;margin-top:5px">{{ timerBtn }}</span>
+        </div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:10px;letter-spacing:.28em;color:#A49D93">同時進行</div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:10px"><span style="font-size:12.5px;font-weight:200;color:#C6BFB4">白飯</span><span style="font-family:'Noto Serif TC',serif;font-size:19px;font-variant-numeric:tabular-nums;color:#C98A3E">{{ rice }}</span></div>
+        <button onClick="{{ toggleRice }}" style="margin-top:9px;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.2em;color:#A49D93;background:none;border:1px solid rgba(244,239,230,.2);padding:6px 12px;cursor:pointer">{{ riceBtn }}</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:relative;display:flex;align-items:center;gap:14px;padding:20px 28px 0">
+    <button onClick="{{ prev }}" style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:.22em;color:#A49D93;background:none;border:none;cursor:pointer;padding:14px 0">← 上一步</button>
+    <span style="flex:1"></span>
+    <button onClick="{{ next }}" style="font-family:'Noto Sans TC',sans-serif;font-size:13px;letter-spacing:.26em;color:#F4EFE6;background:rgba(201,138,62,.18);border:1px solid rgba(201,138,62,.55);padding:15px 28px;cursor:pointer">{{ nextLabel }}</button>
+  </div>
+</div>
+</x-import>
+<p class="capn">Working: step nav, both timers, the ring. The tip is still 眉批 and still lives inside the step — the two rooms share vocabulary even when they don't share colour. Step four turns the button into 上菜.</p></div>
+
+<div><p class="cap">上菜 · last dark screen</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="402px,874px">
+<div style="height:100%;overflow:hidden;position:relative;background:#0C0A09;color:#F4EFE6;font-family:'Noto Sans TC',sans-serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="position:absolute;left:-16%;right:-16%;top:-14%;height:60%;background:radial-gradient(46% 54% at 50% 30%,rgba(201,138,62,.22),transparent 70%);filter:blur(16px);pointer-events:none"></div>
+  <div style="position:relative;text-align:center;padding:22px 30px 0">
+    <div style="font-size:10px;letter-spacing:.66em;color:#C98A3E">上　菜</div>
+    <div style="font-family:'Noto Serif TC',serif;font-size:26px;font-weight:300;line-height:1.6;margin-top:22px">收工了。<br>拍一張,我來寫。</div>
+  </div>
+  <div style="position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:24px 30px 0">
+    <div style="width:100%;aspect-ratio:1;border:1px solid rgba(244,239,230,.22);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:repeating-linear-gradient(115deg,rgba(244,239,230,.04),rgba(244,239,230,.04) 7px,transparent 7px,transparent 15px)">
+      <div style="width:50px;height:50px;border-radius:50%;border:1px solid rgba(201,138,62,.6);display:flex;align-items:center;justify-content:center;font-size:19px;color:#C98A3E">◎</div>
+      <div style="font:10.5px ui-monospace,monospace;letter-spacing:.16em;color:#A49D93">拍照 / 從相簿選</div>
+    </div>
+  </div>
+  <div style="position:relative;padding:22px 30px 0">
+    <button style="width:100%;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;font-weight:500;letter-spacing:.3em;color:#0C0A09;background:#F4EFE6;border:none;padding:16px;cursor:pointer">拍照</button>
+    <button style="width:100%;margin-top:10px;font-family:'Noto Sans TC',sans-serif;font-size:11.5px;letter-spacing:.24em;color:#A49D93;background:none;border:none;cursor:pointer;padding:10px">跳過,直接聽講評</button>
+    <div style="text-align:center;margin-top:8px;font-size:10.5px;letter-spacing:.16em;line-height:1.95;color:#A49D93">寫好後會收進食譜本 ——<br>那一頁就多一行你的紀錄</div>
+  </div>
+</div>
+</x-import>
+<p class="capn">Still the kitchen, so still dark — but the copy is already pointing back at the book, so the fade to paper reads as arriving rather than switching.</p></div>
+
+<div><p class="cap">講評 · printed into the book</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 34px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>家常 · 雞</span><span>二三</span></div>
+  <div style="margin:14px 34px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="text-align:center;padding:22px 34px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#9B2C1E">寫進書裡了</div>
+    <div style="font-size:22px;font-weight:400;margin-top:14px;letter-spacing:.03em">蔥香雞腿飯 · 第三次</div>
+  </div>
+
+  <div style="margin:22px 34px 0">
+    <div style="height:190px;background:repeating-linear-gradient(115deg,rgba(34,32,28,.06),rgba(34,32,28,.06) 7px,transparent 7px,transparent 15px);display:flex;align-items:center;justify-content:center;font:10px ui-monospace,monospace;letter-spacing:.16em;color:#6C685F">你拍的成品照</div>
+    <div style="font-size:11.5px;font-style:italic;line-height:1.85;color:#4E4A42;margin-top:11px">八月二日 · 二十八分鐘 · 比上次快十分</div>
+  </div>
+
+  <sc-if value="{{ hidden }}" hint-placeholder-val="{{ true }}">
+    <div style="text-align:center;margin:28px 34px 0;padding:26px 20px 24px;border-top:1px solid rgba(34,32,28,.2);border-bottom:1px solid rgba(34,32,28,.2)">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#5E5A52">小當家的評價</div>
+      <div style="font-size:36px;font-weight:400;letter-spacing:.4em;color:#C9C3B6;margin:18px 0 22px;text-indent:.4em;filter:blur(6px)">神作</div>
+      <button onClick="{{ reveal }}" style="font-family:'Noto Sans TC',sans-serif;font-size:12.5px;font-weight:500;letter-spacing:.4em;color:#EDEAE2;background:#22201C;border:none;padding:14px 32px;cursor:pointer">揭　曉</button>
+    </div>
+    <div style="text-align:center;padding:16px 44px 0;font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:300;line-height:1.95;color:#4E4A42;text-wrap:pretty">他看了照片、看了你每一步的時間,也記得你前兩次的樣子。</div>
+  </sc-if>
+
+  <sc-if value="{{ revealed }}" hint-placeholder-val="{{ false }}">
+    <div style="text-align:center;margin:28px 34px 0">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#5E5A52">小當家的評價</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-top:18px">
+        <span style="flex:1;height:1px;background:rgba(34,32,28,.24)"></span>
+        <span style="font-size:42px;font-weight:600;letter-spacing:.28em;text-indent:.28em;white-space:nowrap">神作</span>
+        <span style="flex:1;height:1px;background:rgba(34,32,28,.24)"></span>
+      </div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:.26em;color:#4E4A42;margin-top:14px">四級中的第一級</div>
+    </div>
+    <div style="margin:26px 34px 0;padding:18px 20px;background:#F7F4EC;border-left:2px solid #9B2C1E;box-shadow:1px 2px 0 rgba(34,32,28,.09)">
+      <div style="display:flex;align-items:baseline;gap:11px">
+        <span style="width:22px;height:22px;flex:none;background:#9B2C1E;color:#F2EDE3;font-size:11px;display:flex;align-items:center;justify-content:center">當</span>
+        <div style="font-size:14.5px;font-style:italic;line-height:2;text-wrap:pretty">「雞皮脆得剛剛好 —— 這次你等到滋滋聲變小才翻面對吧?」</div>
+      </div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:12.5px;font-weight:300;line-height:2;color:#4E4A42;margin-top:13px;text-wrap:pretty">第三次做,比上次快十分鐘,四個計時器你全都用了。下次收汁前先關火三十秒,醬汁會更亮。</div>
+    </div>
+    <div style="margin:26px 34px 0;padding-top:16px;border-top:1px solid rgba(34,32,28,.2)">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#5E5A52">這一頁的紀錄</div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-top:14px;font-size:13.5px"><span style="color:#9B2C1E;font-size:15px">三</span><span style="flex:1">今天 · 二十八分</span><span style="color:#4E4A42">神作</span></div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-top:11px;font-size:13.5px;color:#4E4A42"><span style="color:#6B6357;font-size:15px">二</span><span style="flex:1">上個月 · 三十八分</span><span>不錯</span></div>
+    </div>
+    <div style="display:flex;margin:26px 34px 0;border-top:1px solid rgba(34,32,28,.2);border-bottom:1px solid rgba(34,32,28,.2);font-family:'Noto Sans TC',sans-serif">
+      <button style="flex:1;font-size:12px;font-weight:500;letter-spacing:.26em;color:#22201C;background:none;border:none;border-right:1px solid rgba(34,32,28,.2);padding:18px 0;cursor:pointer">我同意</button>
+      <button style="flex:1;font-size:12px;letter-spacing:.26em;color:#4E4A42;background:none;border:none;padding:18px 0;cursor:pointer">我不服</button>
+    </div>
+    <button onClick="{{ hide }}" style="width:100%;margin-top:12px;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.22em;color:#5E5A52;background:none;border:none;cursor:pointer;padding:8px">再看一次揭曉</button>
+  </sc-if>
+</div>
+</x-import>
+<p class="capn">Tap 揭曉. Same running head and folio as the recipe page — you are literally on page 二三 of your own book, with tonight added to 這一頁的紀錄. The grade is his; you answer with agreement.</p></div>
+
+</div>
+</section>
+<section class="sec" id="vD">
+<div class="shd"><a class="sid" href="#vD">D</a><span class="sname">食譜 — 邊欄對話 · 食譜本 · 探索牌組</span></div>
+<p class="snote">The recipe page is where 邊欄 lives: ask about the page you're on and his answer is written into it permanently. 這一頁的往來 accumulates like annotations in a used cookbook — which is also the honest place to put the conversation history the brain already keeps.</p>
+<div class="row">
+
+<div><p class="cap">食譜 · with 邊欄</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif">
+  <div style="padding:52px 0 0"></div>
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 34px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>家常 · 雞</span><span>二三</span></div>
+  <div style="margin:14px 34px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="text-align:center;padding:26px 34px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#9B2C1E">第 三 道</div>
+    <div style="font-size:31px;font-weight:400;line-height:1.42;margin-top:16px;letter-spacing:.05em">蔥香雞腿飯</div>
+    <div style="width:22px;height:1px;background:rgba(34,32,28,.28);margin:18px auto 0"></div>
+    <div style="font-size:13.5px;line-height:2.15;color:#4E4A42;margin-top:18px;text-wrap:pretty">雞皮煎到金黃酥脆,<br>蔥薑醬油小火燜出鹹香。</div>
+  </div>
+  <div style="margin:24px 34px 0">
+    <div style="height:194px;background:repeating-linear-gradient(115deg,rgba(34,32,28,.06),rgba(34,32,28,.06) 7px,transparent 7px,transparent 15px);display:flex;align-items:center;justify-content:center;font:10px ui-monospace,monospace;letter-spacing:.16em;color:#6C685F">料理照片</div>
+    <div style="font-size:11.5px;font-style:italic;line-height:1.85;color:#4E4A42;margin-top:10px">圖 · 雞皮朝下入鍋,不要動它。</div>
+  </div>
+
+  <div style="display:flex;align-items:center;margin:24px 34px 0;padding:14px 0;border-top:1px solid rgba(34,32,28,.2);border-bottom:1px solid rgba(34,32,28,.2);font-family:'Noto Sans TC',sans-serif">
+    <span style="font-size:10px;letter-spacing:.32em;color:#5E5A52">份量</span>
+    <span style="flex:1"></span>
+    <button onClick="{{ lessServ }}" style="background:none;border:none;color:#9B2C1E;font-size:19px;padding:0 12px;cursor:pointer;line-height:1">−</button>
+    <span style="font-family:'Noto Serif TC',serif;font-size:16px;font-variant-numeric:tabular-nums;min-width:58px;text-align:center">{{ servLabel }}</span>
+    <button onClick="{{ moreServ }}" style="background:none;border:none;color:#9B2C1E;font-size:19px;padding:0 12px;cursor:pointer;line-height:1">+</button>
+  </div>
+
+  <div style="padding:24px 34px 0">
+    <div style="text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#5E5A52">食　材</div>
+    <div style="margin-top:16px">
+      <sc-for list="{{ ings }}" as="ing" hint-placeholder-count="5">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:12px;font-size:14px"><span>{{ ing.name }}</span><span style="flex:1;border-bottom:1px dotted rgba(34,32,28,.3);transform:translateY(-4px)"></span><span style="color:#4E4A42;font-variant-numeric:tabular-nums">{{ ing.qty }}</span></div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding:28px 34px 0">
+    <div style="text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#5E5A52">作　法</div>
+    <div style="margin-top:20px">
+      <sc-for list="{{ recSteps }}" as="s" hint-placeholder-count="4">
+        <div style="display:flex;gap:16px;margin-bottom:22px">
+          <span style="font-size:20px;color:#9B2C1E;width:20px;flex:none;line-height:1.4">{{ s.n }}</span>
+          <div style="flex:1">
+            <div style="font-size:14px;line-height:2.15;text-wrap:pretty">{{ s.text }}</div>
+            <sc-if value="{{ s.tip }}" hint-placeholder-val="{{ true }}">
+              <div style="margin-top:11px;padding-left:14px;border-left:1px solid #9B2C1E"><div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.28em;color:#9B2C1E">小當家眉批</div><div style="font-size:12.5px;font-style:italic;line-height:1.95;color:#3A362F;margin-top:6px;text-wrap:pretty">{{ s.tip }}</div></sc-if>
+            <sc-if value="{{ s.dur }}" hint-placeholder-val="{{ true }}"><div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.22em;color:#5E5A52;margin-top:9px">{{ s.dur }}</div></sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="margin:8px 34px 0;padding:16px 18px;background:#F7F4EC;border-left:2px solid #9B2C1E;box-shadow:1px 2px 0 rgba(34,32,28,.09)">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.3em;color:#9B2C1E">你問</div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;line-height:1.9;color:#3A362F;margin-top:8px">家裡沒有米酒怎麼辦?</div>
+    <div style="margin-top:14px;padding-top:13px;border-top:1px solid rgba(34,32,28,.16);display:flex;align-items:baseline;gap:11px">
+      <span style="width:20px;height:20px;flex:none;background:#9B2C1E;color:#F2EDE3;font-size:10px;display:flex;align-items:center;justify-content:center">當</span>
+      <div style="flex:1;font-size:14px;font-style:italic;line-height:2;text-wrap:pretty">「不放也行 —— 加四分之一小匙糖,鹹香會回來。第三步我幫你改好了。」</div>
+    </div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.22em;color:#5E5A52;margin-top:11px;text-align:right">已寫進這一頁</div>
+  </div>
+
+  <div style="margin:24px 34px 0;padding-top:16px;border-top:1px solid rgba(34,32,28,.2)">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#5E5A52">這一頁的紀錄</div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:14px;font-size:13.5px"><span style="color:#9B2C1E;font-size:15px">三</span><span style="flex:1">八月二日 · 二十八分</span><span style="color:#4E4A42">神作</span></div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:11px;font-size:13.5px;color:#4E4A42"><span style="color:#6B6357;font-size:15px">二</span><span style="flex:1">上個月 · 三十八分</span><span>不錯</span></div>
+  </div>
+
+  <div style="position:sticky;bottom:0;margin-top:24px;padding:14px 34px 40px;background:linear-gradient(180deg,rgba(237,234,226,0),#EDEAE2 32%)">
+    <div style="display:flex;align-items:center;gap:12px;border:1px solid rgba(34,32,28,.3);padding:12px 15px;margin-bottom:10px">
+      <span style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:12.5px;font-weight:300;color:#5E5A52">問小當家關於這一頁…</span>
+      <span style="color:#9B2C1E;font-size:15px">↑</span>
+    </div>
+    <button style="width:100%;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;font-weight:500;letter-spacing:.34em;color:#EDEAE2;background:#22201C;border:none;padding:16px;cursor:pointer">開始做菜</button>
+  </div>
+</div>
+</x-import>
+<p class="capn">Servings rescale the ingredient column live. The 邊欄 exchange sits where it happened, permanently, and states what it changed. Ask-bar and CTA share the sticky footer — the question is always one tap away without a chat destination existing.</p></div>
+
+<div><p class="cap">食譜本 · the shelf</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 32px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>食譜本</span><span>十四 道</span></div>
+  <div style="margin:14px 32px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+  <div style="margin:18px 32px 0;border:1px solid rgba(34,32,28,.26);padding:11px 15px;font-family:'Noto Sans TC',sans-serif;font-size:12.5px;font-weight:300;color:#5E5A52">搜尋食譜</div>
+  <div style="display:flex;gap:7px;padding:14px 32px 0;font-family:'Noto Sans TC',sans-serif;flex-wrap:wrap">
+    <span style="font-size:11px;letter-spacing:.06em;color:#EDEAE2;background:#22201C;padding:7px 12px">全部</span>
+    <span style="font-size:11px;letter-spacing:.06em;color:#4E4A42;border:1px solid rgba(34,32,28,.24);padding:6px 11px">神作</span>
+    <span style="font-size:11px;letter-spacing:.06em;color:#4E4A42;border:1px solid rgba(34,32,28,.24);padding:6px 11px">三十分內</span>
+    <span style="font-size:11px;letter-spacing:.06em;color:#4E4A42;border:1px solid rgba(34,32,28,.24);padding:6px 11px">還沒煮過</span>
+  </div>
+
+  <div style="padding:20px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">家常 · 雞</div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:15px;font-size:15px"><span style="color:#9B2C1E;font-family:'Noto Sans TC',sans-serif;font-size:11px;width:24px">二三</span><span style="flex:1">蔥香雞腿飯</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;color:#4E4A42">五次 · 神作</span></div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:13px;font-size:15px"><span style="color:#9B2C1E;font-family:'Noto Sans TC',sans-serif;font-size:11px;width:24px">二七</span><span style="flex:1">三杯雞</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;color:#4E4A42">還沒煮</span></div>
+  </div>
+
+  <div style="padding:24px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">家常 · 豆腐</div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:15px;font-size:15px"><span style="color:#9B2C1E;font-family:'Noto Sans TC',sans-serif;font-size:11px;width:24px">三一</span><span style="flex:1">麻婆豆腐</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;color:#4E4A42">三次 · 不錯</span></div>
+  </div>
+
+  <div style="padding:24px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">麵 · 飯</div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:15px;font-size:15px"><span style="color:#9B2C1E;font-family:'Noto Sans TC',sans-serif;font-size:11px;width:24px">四二</span><span style="flex:1">青醬雞胸義大利麵</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;color:#4E4A42">二次 · 普通</span></div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:13px;font-size:15px"><span style="color:#9B2C1E;font-family:'Noto Sans TC',sans-serif;font-size:11px;width:24px">四五</span><span style="flex:1">番茄牛肉燉飯</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;color:#4E4A42">一次 · 神作</span></div>
+  </div>
+
+  <div style="margin:26px 32px 0;padding-top:16px;border-top:1px solid rgba(34,32,28,.2);font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:300;line-height:1.95;color:#4E4A42;text-wrap:pretty">頁碼是這本書自己長出來的 —— 你煮過的菜,我就替你編一頁。</div>
+</div>
+</x-import>
+<p class="capn">A table of contents, not a card grid: chapters by ingredient, folio numbers on the left, attempts and verdict on the right. The book grows a page each time you cook something new.</p></div>
+
+<div><p class="cap">探索牌組 · zero commitment</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:hidden;background:#E7E2D8;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 30px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>想吃什麼</span><span>收藏 五</span></div>
+  <div style="margin:14px 30px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="flex:1;min-height:0;margin:20px 24px 0;position:relative">
+    <div style="position:absolute;inset:0;transform:rotate(1.5deg) translateY(7px);background:#DED7C8;box-shadow:0 8px 20px rgba(34,32,28,.14)"></div>
+    <div style="position:absolute;inset:0;transform:rotate(-.9deg) translateY(3px);background:#E9E3D6;box-shadow:0 8px 20px rgba(34,32,28,.12)"></div>
+    <div style="position:absolute;inset:0;background:#F7F4EC;box-shadow:0 16px 36px rgba(34,32,28,.2);overflow:hidden;display:flex;flex-direction:column">
+      <div style="padding:20px 24px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#9B2C1E">冷門推薦</div>
+      <div style="margin:16px 24px 0;height:42%;background:repeating-linear-gradient(115deg,rgba(34,32,28,.07),rgba(34,32,28,.07) 7px,transparent 7px,transparent 15px);display:flex;align-items:center;justify-content:center;font:10px ui-monospace,monospace;letter-spacing:.16em;color:#6C685F">料理照片</div>
+      <div style="padding:20px 24px 0">
+        <div style="font-size:28px;font-weight:400;line-height:1.36">酒蒸蛤蜊</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.2em;color:#4E4A42;margin-top:12px">十五分 · 沒做過 · 三樣材料</div>
+        <div style="width:22px;height:1px;background:rgba(34,32,28,.3);margin:15px 0"></div>
+        <div style="font-size:13.5px;font-style:italic;line-height:2;color:#3A362F;text-wrap:pretty">你們家從來沒煮過海鮮。失敗率低,香氣卻很嚇人。</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;margin:20px 24px 0;border-top:1px solid rgba(34,32,28,.22);border-bottom:1px solid rgba(34,32,28,.22);font-family:'Noto Sans TC',sans-serif">
+    <button style="flex:1;font-size:11.5px;letter-spacing:.2em;color:#4E4A42;background:none;border:none;border-right:1px solid rgba(34,32,28,.22);padding:17px 0;cursor:pointer">下一張</button>
+    <button style="flex:0 0 78px;font-size:11.5px;letter-spacing:.2em;color:#4E4A42;background:none;border:none;border-right:1px solid rgba(34,32,28,.22);padding:17px 0;cursor:pointer">但是…</button>
+    <button style="flex:1;font-size:11.5px;font-weight:500;letter-spacing:.2em;color:#9B2C1E;background:none;border:none;padding:17px 0;cursor:pointer">收藏</button>
+  </div>
+  <div style="text-align:center;padding:13px 30px 0;font-family:'Noto Sans TC',sans-serif;font-size:11px;letter-spacing:.18em;line-height:1.9;color:#5E5A52">收藏不會排進菜單<br>儀式時我會先看這裡</div>
+</div>
+</x-import>
+<p class="capn">Same paper cards, but nothing here touches the plan — no day chip, no progress rule, no lock. The footer states the contract: liking is not planning, but it feeds the next ritual.</p></div>
+
+</div>
+</section>
+
+<section class="sec" id="vE">
+<div class="shd"><a class="sid" href="#vE">E</a><span class="sname">採買 · 本週 · 設定</span></div>
+<p class="snote">The supermarket screen is the one that has to work one-handed in daylight — paper suits it. Week Board is the plan as a printed table. Settings is a colophon.</p>
+<div class="row">
+
+<div><p class="cap">採買清單</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 32px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>採買清單</span><span>還剩 六 項</span></div>
+  <div style="margin:14px 32px 0;height:1px;background:rgba(34,32,28,.2);position:relative"><div style="position:absolute;left:0;top:0;height:1px;background:#9B2C1E;width:40%"></div></div>
+
+  <div style="padding:24px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">蔬　果</div>
+    <div style="display:flex;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:56px">
+      <span style="width:24px;height:24px;flex:none;border:1px solid rgba(34,32,28,.42)"></span>
+      <span style="flex:1;font-size:16px">蔥</span>
+      <span style="font-size:14px;color:#4E4A42;font-variant-numeric:tabular-nums">1 把</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:56px;opacity:.5">
+      <span style="width:24px;height:24px;flex:none;border:1px solid #9B2C1E;background:#9B2C1E;color:#F2EDE3;font-size:13px;display:flex;align-items:center;justify-content:center">✓</span>
+      <span style="flex:1;font-size:16px;text-decoration:line-through">薑</span>
+      <span style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.14em;color:#4E4A42">已買</span>
+    </div>
+  </div>
+  <div style="padding:24px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">肉 · 海鮮</div>
+    <div style="display:flex;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:56px">
+      <span style="width:24px;height:24px;flex:none;border:1px solid rgba(34,32,28,.42)"></span>
+      <span style="flex:1;font-size:16px">去骨雞腿排</span>
+      <span style="font-size:14px;color:#4E4A42;font-variant-numeric:tabular-nums">4 塊</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:56px">
+      <span style="width:24px;height:24px;flex:none;border:1px solid rgba(34,32,28,.42)"></span>
+      <span style="flex:1;font-size:16px">豬絞肉</span>
+      <span style="font-size:14px;color:#4E4A42;font-variant-numeric:tabular-nums">150 g</span>
+    </div>
+  </div>
+  <div style="padding:24px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">冷　藏</div>
+    <div style="display:flex;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:56px">
+      <span style="width:24px;height:24px;flex:none;border:1px solid rgba(34,32,28,.42)"></span>
+      <span style="flex:1;font-size:16px">板豆腐</span>
+      <span style="font-size:14px;color:#4E4A42;font-variant-numeric:tabular-nums">1 盒</span>
+    </div>
+  </div>
+
+  <div style="margin:26px 32px 0;padding:16px 18px;background:#F7F4EC;border-left:2px solid #9B2C1E;box-shadow:1px 2px 0 rgba(34,32,28,.09)">
+    <div style="font-size:13.5px;font-style:italic;line-height:1.95;text-wrap:pretty">「醬油快沒了吧?我沒放進清單 —— 要的話跟我說一聲。」</div>
+  </div>
+  <div style="text-align:center;padding:18px 32px 0;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.14em;color:#4E4A42">打勾即時生效,離線也可以</div>
+</div>
+</x-import>
+<p class="capn">Aisle chapters, seal-red stamps, 已買 spelled out so colour isn't load-bearing, 56pt rows. The staples nudge is a note, never an auto-added row.</p></div>
+
+<div><p class="cap">本週 · Week Board</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 32px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>本週菜單</span><span>七月二七 — 八月二</span></div>
+  <div style="margin:14px 32px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="padding:22px 32px 0">
+    <div style="display:flex;align-items:baseline;gap:14px;padding:13px 0;border-bottom:1px solid rgba(34,32,28,.12);opacity:.55"><span style="font-size:15px;width:18px">一</span><span style="flex:1;font-size:14.5px">蔥香雞腿飯</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;color:#4E4A42">神作</span></div>
+    <div style="display:flex;align-items:baseline;gap:14px;padding:13px 0;border-bottom:1px solid rgba(34,32,28,.12);opacity:.55"><span style="font-size:15px;width:18px">二</span><span style="flex:1;font-size:14.5px">青醬雞胸義大利麵</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;color:#4E4A42">普通</span></div>
+    <div style="display:flex;align-items:center;gap:14px;padding:15px 16px;margin:6px -16px;background:#F7F4EC;border-left:2px solid #9B2C1E;box-shadow:1px 2px 0 rgba(34,32,28,.09)">
+      <span style="font-size:15px;color:#9B2C1E;width:18px">三</span>
+      <div style="flex:1"><div style="font-size:15.5px">麻婆豆腐</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.2em;color:#9B2C1E;margin-top:5px">今晚 · 二十五分</div></div>
+      <button style="font-family:'Noto Sans TC',sans-serif;font-size:11.5px;letter-spacing:.16em;color:#EDEAE2;background:#22201C;border:none;padding:10px 14px;cursor:pointer">開始</button>
+    </div>
+    <div style="display:flex;align-items:baseline;gap:14px;padding:13px 0;border-bottom:1px solid rgba(34,32,28,.12);border-top:1px solid rgba(34,32,28,.12)"><span style="font-size:15px;width:18px">四</span><span style="flex:1;font-size:14.5px">麻婆豆腐(隔夜)</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.14em;color:#9B2C1E">已選取</span></div>
+    <div style="display:flex;align-items:baseline;gap:14px;padding:13px 0;border-bottom:1px solid rgba(34,32,28,.12)"><span style="font-size:15px;width:18px">五</span><span style="flex:1;font-size:14.5px">蔥香雞腿飯</span></div>
+    <div style="display:flex;align-items:baseline;gap:14px;padding:13px 0;border-bottom:1px solid rgba(34,32,28,.12)"><span style="font-size:15px;width:18px">六</span><span style="flex:1;font-size:14.5px;color:#4E4A42">外食</span></div>
+    <div style="display:flex;align-items:center;gap:14px;padding:13px 0"><span style="font-size:15px;width:18px;color:#4E4A42">日</span><div style="flex:1;display:flex;align-items:center;gap:10px"><span style="width:12px;height:12px;border-radius:50%;border:1.5px solid rgba(155,44,30,.3);border-top-color:#9B2C1E;animation:sp 1s linear infinite"></span><span style="font-family:'Noto Sans TC',sans-serif;font-size:12.5px;font-weight:300;color:#4E4A42">對調中…</span></div></div>
+  </div>
+  <div style="text-align:center;padding:10px 32px 0;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.14em;color:#5E5A52">長按兩天可對調</div>
+
+  <div style="margin:26px 32px 0;padding-top:20px;border-top:1px solid rgba(34,32,28,.2)">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>下週</span><span>八月三 — 九</span></div>
+    <div style="text-align:center;margin-top:16px">
+      <div style="font-size:17px;line-height:1.7">還沒排 —— 現在排嗎?</div>
+      <div style="display:flex;gap:8px;margin-top:16px;font-family:'Noto Sans TC',sans-serif">
+        <button style="flex:1;font-size:12px;font-weight:500;letter-spacing:.2em;color:#EDEAE2;background:#22201C;border:none;padding:13px;cursor:pointer">滑牌排</button>
+        <button style="flex:1;font-size:12px;letter-spacing:.2em;color:#22201C;background:none;border:1px solid rgba(34,32,28,.34);padding:13px;cursor:pointer">用寫的</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-import>
+<p class="capn">Cooked days fade and keep their verdict; tonight is the only slip on the page; the pending swap shimmers. Next week offers both ritual models by name.</p></div>
+
+<div><p class="cap">設定 · 版權頁</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 32px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>設定</span><span>關閉</span></div>
+  <div style="margin:14px 32px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="padding:24px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">儀式節奏</div>
+    <div style="display:flex;gap:8px;margin-top:14px;font-family:'Noto Sans TC',sans-serif">
+      <span style="flex:1;text-align:center;font-size:12px;color:#EDEAE2;background:#22201C;padding:11px 0">每週</span>
+      <span style="flex:1;text-align:center;font-size:12px;color:#4E4A42;border:1px solid rgba(34,32,28,.26);padding:10px 0">每兩週</span>
+      <span style="flex:1;text-align:center;font-size:12px;color:#4E4A42;border:1px solid rgba(34,32,28,.26);padding:10px 0">不固定</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;padding:16px 0 0"><div style="flex:1;font-size:14.5px">哪一天</div><div style="font-size:15px;color:#4E4A42">週日 19:30</div></div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:300;line-height:1.95;color:#4E4A42;margin-top:12px;text-wrap:pretty">我會在這個時間放一張便條給你,附一副牌。你也可以隨時自己開始。</div>
+  </div>
+
+  <div style="padding:26px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">便條通知</div>
+    <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14)">
+      <div style="flex:1"><div style="font-size:14.5px">儀式提醒</div></div>
+      <span style="width:42px;height:24px;background:#9B2C1E;display:flex;align-items:center;justify-content:flex-end;padding:0 3px"><span style="width:18px;height:18px;background:#F2EDE3"></span></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14)">
+      <div style="flex:1"><div style="font-size:14.5px">飯後講評</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;color:#4E4A42;margin-top:5px">煮完約一小時後問今天怎麼樣</div></div>
+      <span style="width:42px;height:24px;border:1px solid rgba(34,32,28,.34);display:flex;align-items:center;padding:0 3px"><span style="width:18px;height:18px;background:rgba(34,32,28,.34)"></span></span>
+    </div>
+  </div>
+
+  <div style="padding:26px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">這本書是為誰寫的</div>
+    <div style="display:flex;align-items:baseline;gap:10px;margin-top:15px;font-size:14px"><span>人數</span><span style="flex:1;border-bottom:1px dotted rgba(34,32,28,.3);transform:translateY(-4px)"></span><span style="color:#4E4A42">2 人份</span></div>
+    <div style="display:flex;align-items:baseline;gap:10px;margin-top:12px;font-size:14px"><span>辣度</span><span style="flex:1;border-bottom:1px dotted rgba(34,32,28,.3);transform:translateY(-4px)"></span><span style="color:#4E4A42">中辣</span></div>
+    <div style="display:flex;align-items:baseline;gap:10px;margin-top:12px;font-size:14px"><span>不吃</span><span style="flex:1;border-bottom:1px dotted rgba(34,32,28,.3);transform:translateY(-4px)"></span><span style="color:#4E4A42">香菜</span></div>
+    <div style="display:flex;align-items:baseline;gap:10px;margin-top:12px;font-size:14px"><span>過敏原</span><span style="flex:1;border-bottom:1px dotted rgba(34,32,28,.3);transform:translateY(-4px)"></span><span style="color:#9B2C1E">花生</span></div>
+  </div>
+
+  <div style="margin:26px 32px 0;padding-top:18px;border-top:1px solid rgba(34,32,28,.2);text-align:center">
+    <div style="width:28px;height:28px;background:#9B2C1E;color:#F2EDE3;display:inline-flex;align-items:center;justify-content:center;font-size:14px">當</div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.2em;line-height:2;color:#4E4A42;margin-top:12px">小當家 · 私廚手記<br>為這個家寫的第 一 版</div>
+  </div>
+</div>
+</x-import>
+<p class="capn">Settings as a colophon: cadence, notification switches as printed toggles, preferences on leader-dot lines, and the book's own imprint at the foot. Allergens are the only red entry.</p></div>
+
+</div>
+</section>
+
+<section class="sec" id="vF">
+<div class="shd"><a class="sid" href="#vF">F</a><span class="sname">系統 — tokens</span></div>
+<p class="snote">Two rooms, no overlap. Nothing reconciles because no screen mixes them.</p>
+<div class="row" style="align-items:stretch">
+
+<div style="width:520px;background:#EDEAE2;color:#22201C;border:1px solid rgba(34,32,28,.16);padding:24px">
+  <div style="font:600 9.5px ui-monospace,monospace;letter-spacing:.3em;color:#9B2C1E">紙 · PAPER</div>
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:16px">
+    <div style="width:112px"><div style="height:52px;background:#EDEAE2;border:1px solid rgba(34,32,28,.2)"></div><div style="font:700 11px system-ui;margin-top:7px">stock</div><div style="font:10.5px ui-monospace,monospace;color:#4E4A42">#EDEAE2</div></div>
+    <div style="width:112px"><div style="height:52px;background:#F7F4EC;border:1px solid rgba(34,32,28,.2)"></div><div style="font:700 11px system-ui;margin-top:7px">slip</div><div style="font:10.5px ui-monospace,monospace;color:#4E4A42">#F7F4EC</div></div>
+    <div style="width:112px"><div style="height:52px;background:#22201C"></div><div style="font:700 11px system-ui;margin-top:7px">ink</div><div style="font:10.5px ui-monospace,monospace;color:#4E4A42">#22201C</div></div>
+    <div style="width:112px"><div style="height:52px;background:#4E4A42"></div><div style="font:700 11px system-ui;margin-top:7px">inkDim</div><div style="font:10.5px ui-monospace,monospace;color:#4E4A42">#4E4A42</div></div>
+    <div style="width:112px"><div style="height:52px;background:#5E5A52"></div><div style="font:700 11px system-ui;margin-top:7px">inkFaint</div><div style="font:10.5px ui-monospace,monospace;color:#4E4A42">#5E5A52</div></div>
+    <div style="width:112px"><div style="height:52px;background:#9B2C1E"></div><div style="font:700 11px system-ui;margin-top:7px">seal</div><div style="font:10.5px ui-monospace,monospace;color:#4E4A42">#9B2C1E</div></div>
+  </div>
+  <div style="font:11.5px/1.85 system-ui;color:#4E4A42;margin-top:16px">rule = ink @ 20% · dotted leader = ink @ 30% · slip shadow = <code>1px 2px 0 ink@9%</code>. Margins 32–36px. Section labels centred, 10px, tracking .42–.5em. Seal red appears <b>once per page</b>.</div>
+</div>
+
+<div style="width:520px;background:#0C0A09;color:#F4EFE6;padding:24px">
+  <div style="font:600 9.5px ui-monospace,monospace;letter-spacing:.3em;color:#C98A3E">灶 · STAGE(僅做菜)</div>
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:16px">
+    <div style="width:112px"><div style="height:52px;background:#0C0A09;border:1px solid rgba(244,239,230,.24)"></div><div style="font:700 11px system-ui;margin-top:7px">stage</div><div style="font:10.5px ui-monospace,monospace;color:#A49D93">#0C0A09</div></div>
+    <div style="width:112px"><div style="height:52px;background:#F4EFE6"></div><div style="font:700 11px system-ui;margin-top:7px">ink</div><div style="font:10.5px ui-monospace,monospace;color:#A49D93">#F4EFE6</div></div>
+    <div style="width:112px"><div style="height:52px;background:#A49D93"></div><div style="font:700 11px system-ui;margin-top:7px">inkDim</div><div style="font:10.5px ui-monospace,monospace;color:#A49D93">#A49D93</div></div>
+    <div style="width:112px"><div style="height:52px;background:#C98A3E"></div><div style="font:700 11px system-ui;margin-top:7px">brass</div><div style="font:10.5px ui-monospace,monospace;color:#A49D93">#C98A3E</div></div>
+    <div style="width:112px"><div style="height:52px;background:#DCC59C"></div><div style="font:700 11px system-ui;margin-top:7px">brassSoft</div><div style="font:10.5px ui-monospace,monospace;color:#A49D93">#DCC59C</div></div>
+    <div style="width:112px"><div style="height:52px;background:#9B2C1E"></div><div style="font:700 11px system-ui;margin-top:7px">seal</div><div style="font:10.5px ui-monospace,monospace;color:#A49D93">#9B2C1E</div></div>
+  </div>
+  <div style="font:11.5px/1.85 system-ui;color:#A49D93;margin-top:16px">Glow = <code>radial(brass @20%) blur 16px</code>, anchored bottom. Rules are 1px brass. Only three screens use this: 灶前, 計時, 上菜. The seal is the one token both rooms share.</div>
+</div>
+
+<div style="width:520px;background:#EDEAE2;color:#22201C;border:1px solid rgba(34,32,28,.16);padding:24px">
+  <div style="font:600 9.5px ui-monospace,monospace;letter-spacing:.3em;color:#9B2C1E">字　體</div>
+  <div style="margin-top:18px">
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(34,32,28,.14);padding-bottom:13px"><span style="width:118px;flex:none;font:9.5px ui-monospace,monospace;color:#5E5A52">display 31</span><span style="font-family:'Noto Serif TC',serif;font-size:31px;font-weight:400;letter-spacing:.04em">蔥香雞腿飯</span></div>
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(34,32,28,.14);padding:13px 0"><span style="width:118px;flex:none;font:9.5px ui-monospace,monospace;color:#5E5A52">verdict 42/600</span><span style="font-family:'Noto Serif TC',serif;font-size:32px;font-weight:600;letter-spacing:.28em">神作</span></div>
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(34,32,28,.14);padding:13px 0"><span style="width:118px;flex:none;font:9.5px ui-monospace,monospace;color:#5E5A52">body 14 serif</span><span style="font-family:'Noto Serif TC',serif;font-size:14px;line-height:2.15">中火煎雞皮面六分鐘。</span></div>
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(34,32,28,.14);padding:13px 0"><span style="width:118px;flex:none;font:9.5px ui-monospace,monospace;color:#5E5A52">眉批 12.5 italic</span><span style="font-family:'Noto Serif TC',serif;font-size:12.5px;font-style:italic;color:#3A342C">聽到滋滋聲變小就翻面。</span></div>
+    <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid rgba(34,32,28,.14);padding:13px 0"><span style="width:118px;flex:none;font:9.5px ui-monospace,monospace;color:#5E5A52">label 10/.5em</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#5E5A52">食　材</span></div>
+    <div style="display:flex;align-items:baseline;gap:16px;padding:13px 0"><span style="width:118px;flex:none;font:9.5px ui-monospace,monospace;color:#5E5A52">ui 12.5 sans 300</span><span style="font-family:'Noto Sans TC',sans-serif;font-size:12.5px;font-weight:300;color:#3A362F">寫給小當家…</span></div>
+  </div>
+  <div style="font:11.5px/1.85 system-ui;color:#4E4A42;margin-top:16px">Serif carries the book's voice — names, verdicts, recipe body, 眉批. Sans is only for UI chrome, labels and what <b>you</b> type. That split is what keeps his voice distinct from the interface.</div>
+</div>
+
+<div style="width:520px;background:#EDEAE2;color:#22201C;border:1px solid rgba(34,32,28,.16);padding:24px">
+  <div style="font:600 9.5px ui-monospace,monospace;letter-spacing:.3em;color:#9B2C1E">元　件</div>
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center">
+    <button style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:500;letter-spacing:.32em;color:#EDEAE2;background:#22201C;border:none;padding:14px 24px;cursor:pointer">開始做菜</button>
+    <button style="font-family:'Noto Sans TC',sans-serif;font-size:13px;letter-spacing:.3em;color:#22201C;background:none;border:1px solid #22201C;padding:13px 22px;cursor:pointer">登入</button>
+    <button style="font-family:'Noto Sans TC',sans-serif;font-size:11.5px;letter-spacing:.16em;color:#4E4A42;background:none;border:1px solid rgba(34,32,28,.26);padding:11px 16px;cursor:pointer">再跟你說</button>
+  </div>
+  <div style="font:11px/1.8 system-ui;color:#4E4A42;margin-top:11px">ink-filled = the one committing action per page · outlined = neutral · light-outlined = dismissive</div>
+
+  <div style="margin-top:20px;padding:15px 17px;background:#F7F4EC;border-left:2px solid #9B2C1E;box-shadow:1px 2px 0 rgba(34,32,28,.09)">
+    <div style="display:flex;align-items:baseline;gap:11px"><span style="width:22px;height:22px;flex:none;background:#9B2C1E;color:#F2EDE3;font-family:'Noto Serif TC',serif;font-size:11px;display:flex;align-items:center;justify-content:center">當</span><div style="font-family:'Noto Serif TC',serif;font-size:14px;font-style:italic;line-height:1.95">「他的話一律是這張紙。」</div></div>
+  </div>
+  <div style="font:11px/1.8 system-ui;color:#4E4A42;margin-top:11px">slip — every utterance from 小當家, anywhere in the app: home, 便條, 邊欄, 講評. Yours is a plain outlined box, sans, unsigned.</div>
+
+  <div style="display:flex;margin-top:20px;border-top:1px solid rgba(34,32,28,.2);border-bottom:1px solid rgba(34,32,28,.2)">
+    <button style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:11.5px;letter-spacing:.2em;color:#4E4A42;background:none;border:none;border-right:1px solid rgba(34,32,28,.2);padding:16px 0;cursor:pointer">換一道</button>
+    <button style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:11.5px;font-weight:500;letter-spacing:.2em;color:#9B2C1E;background:none;border:none;padding:16px 0;cursor:pointer">排入這天</button>
+  </div>
+  <div style="font:11px/1.8 system-ui;color:#4E4A42;margin-top:11px">ruledBar — the paper alternative to a row of pills. Used for any 2–3 way choice.</div>
+</div>
+
+</div>
+<p class="snote" style="margin-top:22px" data-tokens-tail><b>Ported in sections G–J below:</b> states &amp; edge cases, the copy_pack sheet, motion (the throw and 揭曉 both survive; the burner flare now belongs only to 灶), and accessibility — the AX-size rules change on paper, since ink-on-cream at 11px is already legible where 9px brass-on-black was not. All four are done; the Claude Code handoff is the only thing left.</p>
+</section>
+
+<section class="sec" id="vG">
+<div class="shd"><a class="sid" href="#vG">G</a><span class="sname">狀態 — 空白頁 · 中斷 · 離線 · 沒拍照</span></div>
+<p class="snote">On paper these change character. An empty state is <b>a blank page with an invitation</b> — a book waiting to be written in, which is a far better first impression than an empty dark screen. A failure is a slip he left you: in his voice, naming what he'll do and what wasn't damaged. Offline never blocks a checkbox; it only means he can't answer.</p>
+<div class="row">
+
+<div><p class="cap">第一頁 · nothing written yet</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 34px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>我們家的廚房</span><span>第 一 頁</span></div>
+  <div style="margin:14px 34px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 40px;text-align:center">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.5em;color:#9B2C1E">還是空的</div>
+    <div style="font-size:26px;font-weight:400;line-height:1.65;margin-top:20px">這本書<br>還沒有第一道菜</div>
+    <div style="font-size:13.5px;line-height:2.2;color:#4E4A42;margin-top:20px;text-wrap:pretty">你的口味我已經記下了。<br>剩下兩條路,隨你挑。</div>
+  </div>
+
+  <div style="padding:0 34px">
+    <button style="width:100%;font-family:'Noto Sans TC',sans-serif;font-size:13.5px;font-weight:500;letter-spacing:.34em;color:#EDEAE2;background:#22201C;border:none;padding:16px;cursor:pointer">排這一週</button>
+    <div style="text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.14em;color:#5E5A52;margin-top:10px">滑十二張牌,我把五天排好</div>
+    <button style="width:100%;margin-top:18px;font-family:'Noto Sans TC',sans-serif;font-size:12.5px;letter-spacing:.3em;color:#22201C;background:none;border:1px solid rgba(34,32,28,.34);padding:14px;cursor:pointer">今晚先煮一道</button>
+    <div style="text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.14em;color:#5E5A52;margin-top:10px">告訴我冰箱有什麼就好</div>
+  </div>
+
+  <div style="margin:26px 34px 0;padding-top:16px;border-top:1px solid rgba(34,32,28,.2);text-align:center;font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:300;line-height:1.95;color:#4E4A42;text-wrap:pretty">煮過的菜我會自己編頁碼收進來 —— 你不用整理。</div>
+</div>
+</x-import>
+<p class="capn">第 一 頁 instead of a folio number does the whole job: the book exists, it's just unwritten. Two doors, one recommended, both his — no illustration, no "no data yet".</p></div>
+
+<div><p class="cap">中斷 · brain failure</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:11px;padding:10px 32px 0">
+    <span style="width:26px;height:26px;flex:none;background:#9B2C1E;color:#F2EDE3;font-size:13px;display:flex;align-items:center;justify-content:center">當</span>
+    <div style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52">本週儀式 · 中斷</div>
+    <span style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.2em;color:#5E5A52">關閉</span>
+  </div>
+  <div style="margin:14px 32px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="flex:1;min-height:0;padding:22px 32px 0;display:flex;flex-direction:column;gap:18px">
+    <div style="align-self:flex-end;max-width:78%;border:1px solid rgba(34,32,28,.28);padding:13px 16px">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:13.5px;font-weight:300;line-height:1.85;color:#3A362F">想吃辣,而且週四我不在</div>
+    </div>
+
+    <div style="background:#F7F4EC;padding:18px 20px;box-shadow:1px 2px 0 rgba(34,32,28,.1);border-left:2px solid #9B2C1E">
+      <div style="font-size:14.5px;font-style:italic;line-height:2.05;text-wrap:pretty">「可惡…廚房出了點狀況,那一份我沒寫完。你剛剛說的我都記著了 —— 再讓我試一次。」</div>
+      <div style="display:flex;gap:8px;margin-top:16px;font-family:'Noto Sans TC',sans-serif">
+        <button style="flex:1;font-size:12px;font-weight:500;letter-spacing:.2em;color:#EDEAE2;background:#22201C;border:none;padding:12px;cursor:pointer">再試一次</button>
+        <button style="flex:0 0 96px;font-size:11.5px;letter-spacing:.16em;color:#4E4A42;background:none;border:1px solid rgba(34,32,28,.26);padding:12px;cursor:pointer">改天再排</button>
+      </div>
+    </div>
+
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:11px;font-weight:300;line-height:1.95;color:#4E4A42;padding:0 2px;text-wrap:pretty">你這週已經鎖定的菜單沒有變動。這次只影響下週的提案。</div>
+
+    <div style="border:1px solid rgba(34,32,28,.24);padding:16px 18px">
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52">不用等他也能做的事</div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;font-size:14px"><span style="flex:1">自己排下週</span><span style="color:#9B2C1E">→</span></div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-top:12px;font-size:14px"><span style="flex:1">沿用這一週的菜單</span><span style="color:#9B2C1E">→</span></div>
+    </div>
+  </div>
+
+  <div style="padding:18px 32px 0">
+    <div style="display:flex;align-items:center;gap:12px;border-top:1px solid rgba(34,32,28,.2);padding-top:14px">
+      <span style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;color:#5E5A52">寫給小當家…</span>
+      <span style="color:#9B2C1E;font-size:15px">↑</span>
+    </div>
+  </div>
+</div>
+</x-import>
+<p class="capn">Three obligations, all met in copy: keep the user's input, say what was <i>not</i> damaged, offer a path that doesn't need the brain. No error code, no red banner — the slip is already his voice.</p></div>
+
+<div><p class="cap">離線 · 在超市</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 32px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>採買清單</span><span>還剩 四 項</span></div>
+  <div style="margin:14px 32px 0;height:1px;background:rgba(34,32,28,.2);position:relative"><div style="position:absolute;left:0;top:0;height:1px;background:#9B2C1E;width:60%"></div></div>
+
+  <div style="margin:18px 32px 0;border:1px dashed rgba(34,32,28,.34);padding:13px 15px;font-family:'Noto Sans TC',sans-serif;font-size:11.5px;font-weight:300;line-height:1.85;color:#4E4A42;text-wrap:pretty">目前離線 —— 打勾照樣有效,回到有訊號的地方我再同步。</div>
+
+  <div style="padding:20px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">蔬　果</div>
+    <div style="display:flex;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:56px;opacity:.5">
+      <span style="width:24px;height:24px;flex:none;border:1px solid #9B2C1E;background:#9B2C1E;color:#F2EDE3;font-size:13px;display:flex;align-items:center;justify-content:center">✓</span>
+      <span style="flex:1;font-size:16px;text-decoration:line-through">蔥</span>
+      <span style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.14em;color:#4E4A42">待同步</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:56px">
+      <span style="width:24px;height:24px;flex:none;border:1px solid rgba(34,32,28,.42)"></span>
+      <span style="flex:1;font-size:16px">薑</span>
+      <span style="font-size:14px;color:#4E4A42;font-variant-numeric:tabular-nums">1 塊</span>
+    </div>
+  </div>
+  <div style="padding:22px 32px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#9B2C1E">肉 · 海鮮</div>
+    <div style="display:flex;align-items:center;gap:16px;padding:15px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:56px">
+      <span style="width:24px;height:24px;flex:none;border:1px solid rgba(34,32,28,.42)"></span>
+      <span style="flex:1;font-size:16px">去骨雞腿排</span>
+      <span style="font-size:14px;color:#4E4A42;font-variant-numeric:tabular-nums">4 塊</span>
+    </div>
+  </div>
+
+  <div style="margin:26px 32px 0;padding:15px 17px;border:1px solid rgba(34,32,28,.18);background:rgba(34,32,28,.03)">
+    <div style="display:flex;align-items:baseline;gap:11px">
+      <span style="width:22px;height:22px;flex:none;border:1px solid rgba(34,32,28,.3);color:#5E5A52;font-family:'Noto Serif TC',serif;font-size:11px;display:flex;align-items:center;justify-content:center">當</span>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:300;line-height:1.9;color:#4E4A42;text-wrap:pretty">小當家現在連不上。清單和食譜都在本機 —— 想問他問題,等回到訊號範圍。</div>
+    </div>
+  </div>
+</div>
+</x-import>
+<p class="capn">The seal goes hollow when he can't answer — the one place his mark is outlined instead of filled, which reads instantly without a word. Checkboxes are never gated on the network.</p></div>
+
+<div><p class="cap">牌發完了 · 沒拍照</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#E7E2D8;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 30px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>想吃什麼</span><span>收藏 八</span></div>
+  <div style="margin:14px 30px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="margin:22px 24px 0;border:1px dashed rgba(34,32,28,.34);padding:30px 24px;text-align:center">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#5E5A52">今天的牌發完了</div>
+    <div style="font-size:24px;font-weight:400;line-height:1.6;margin-top:16px">明天再洗一副</div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:300;line-height:2;color:#4E4A42;margin-top:14px;text-wrap:pretty">你今天看了十二道、收藏了三道。我拿這些去想想下週。</div>
+    <button style="margin-top:20px;font-family:'Noto Sans TC',sans-serif;font-size:12px;letter-spacing:.24em;color:#22201C;background:none;border:1px solid rgba(34,32,28,.34);padding:12px 22px;cursor:pointer">看我的收藏</button>
+  </div>
+
+  <div style="margin:28px 24px 0;padding-top:20px;border-top:1px solid rgba(34,32,28,.2)">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#5E5A52">另一種狀態 · 沒拍照就講評</div>
+    <div style="margin-top:16px;background:#F7F4EC;padding:18px 20px;box-shadow:1px 2px 0 rgba(34,32,28,.1);border-left:2px solid #9B2C1E">
+      <div style="display:flex;align-items:baseline;gap:11px">
+        <span style="width:22px;height:22px;flex:none;background:#9B2C1E;color:#F2EDE3;font-size:11px;display:flex;align-items:center;justify-content:center">當</span>
+        <div style="font-size:14px;font-style:italic;line-height:2;text-wrap:pretty">「沒看到盤子,那我只能從過程講 —— 二十八分鐘、四個計時器都用了,節奏是對的。」</div>
+      </div>
+      <div style="font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:300;line-height:1.95;color:#4E4A42;margin-top:12px;text-wrap:pretty">下次拍一張,我才能說你的擺盤。</div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(34,32,28,.16);text-align:center">
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.42em;color:#5E5A52">小當家的評價</div>
+        <div style="font-size:30px;font-weight:600;letter-spacing:.28em;margin-top:12px;text-indent:.28em">不錯</div>
+        <div style="font-family:'Noto Sans TC',sans-serif;font-size:10.5px;letter-spacing:.22em;color:#4E4A42;margin-top:12px">依過程評分 · 沒有擺盤分</div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-import>
+<p class="capn">Deck exhaustion is tomorrow's promise plus what today's swipes bought. Skipping the photo still earns a verdict — it just states which evidence was missing, so the grade stays honest.</p></div>
+
+</div>
+</section>
+<section class="sec" id="vH">
+<div class="shd"><a class="sid" href="#vH">H</a><span class="sname">copy_pack — every string is data</span></div>
+<p class="snote">Screens reference keys, never literals. Three changes from the v1 list: <b>presence keys are deleted</b> (a book's author is never "online"), the tip label becomes <b>眉批</b>, and four new keys arrive with the book metaphor. Each has a neutral fallback so a household whose persona row fails to load still gets a usable, if flat, app.</p>
+
+<div style="max-width:1090px;background:#EDEAE2;color:#22201C;border:1px solid rgba(34,32,28,.16);padding:24px 26px 26px">
+  <div style="display:flex;font:600 9.5px ui-monospace,monospace;letter-spacing:.16em;color:#5E5A52;padding:0 0 11px;border-bottom:1px solid rgba(34,32,28,.24)">
+    <span style="width:210px;flex:none">KEY</span><span style="flex:1">小當家</span><span style="width:200px;flex:none">FALLBACK</span>
+  </div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">app_subtitle</span><span style="flex:1;font-size:13.5px">你的私廚,在口袋裡</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">你的料理助手</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">book_title</span><span style="flex:1;font-size:13.5px">私廚手記</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">食譜</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">tip_label　<span style="color:#5E5A52">新</span></span><span style="flex:1;font-size:13.5px">小當家眉批</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">秘訣</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">inbox_title　<span style="color:#5E5A52">新</span></span><span style="flex:1;font-size:13.5px">與小當家的往來</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">訊息</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">margin_ask　<span style="color:#5E5A52">新</span></span><span style="flex:1;font-size:13.5px">問小當家關於這一頁…</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">提問</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">margin_written　<span style="color:#5E5A52">新</span></span><span style="flex:1;font-size:13.5px">已寫進這一頁</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">已儲存</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">ritual_invite</span><span style="flex:1;font-size:13.5px;line-height:1.75">該排下週的菜單了。給我十二張牌的時間就好。</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">來排下週菜單</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">ritual_cta_swipe / write</span><span style="flex:1;font-size:13.5px">開始滑牌 / 用寫的</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">開始 / 用輸入的</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">swipe_hint</span><span style="flex:1;font-size:13.5px">右滑排入 · 左滑換道 · 上滑補一句</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">右滑選取 · 左滑跳過</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">note_promise</span><span style="flex:1;font-size:13.5px;line-height:1.75">不用等 —— 牌繼續發,改好了它會再出現一次。</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">修改中,稍後再出現</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">thinking_stages[]</span><span style="flex:1;font-size:13.5px">看菜單… / 配菜… / 寫清單…</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">處理中…</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">wait_leave_ok</span><span style="flex:1;font-size:13.5px;line-height:1.75">你可以先去忙 —— 排好我會放進便條通知你。</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">完成後會通知你</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">lock_hero / signoff</span><span style="flex:1;font-size:13.5px">這一週,我來安排 / 放心去過你的一週</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">本週已鎖定 / 已存好</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">crossing_warning　<span style="color:#5E5A52">新</span></span><span style="flex:1;font-size:13.5px">進入灶前 · 畫面會暗下來</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">進入烹飪模式</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">plate_up_title / ask</span><span style="flex:1;font-size:13.5px">上菜 / 收工了。拍一張,我來寫。</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">完成 / 拍張成品照</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">verdict_written　<span style="color:#5E5A52">新</span></span><span style="flex:1;font-size:13.5px">寫進書裡了</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">已記錄</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">verdict_reveal_cta</span><span style="flex:1;font-size:13.5px">揭曉</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">看評價</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">rating_tiers[]</span><span style="flex:1;font-size:13.5px">神作 / 不錯 / 普通 / 翻車</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">很好 / 不錯 / 普通 / 失敗</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">tier_position</span><span style="flex:1;font-size:13.5px">四級中的第 N 級</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">四級中的第 N 級</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">verdict_agree / appeal</span><span style="flex:1;font-size:13.5px">我同意 / 我不服</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">同意 / 不同意</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">failure_message</span><span style="flex:1;font-size:13.5px;line-height:1.75">可惡…廚房出了點狀況,再讓我試一次。</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">出了點問題,請再試一次</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">offline_note</span><span style="flex:1;font-size:13.5px;line-height:1.75">打勾照樣有效,回到訊號範圍我再同步。</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">離線中,稍後同步</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0;border-bottom:1px solid rgba(34,32,28,.1)"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">empty_book　<span style="color:#5E5A52">新</span></span><span style="flex:1;font-size:13.5px">這本書還沒有第一道菜</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">還沒有菜單</span></div>
+  <div style="display:flex;align-items:baseline;padding:12px 0"><span style="width:210px;flex:none;font:11.5px ui-monospace,monospace;color:#9B2C1E">deck_exhausted</span><span style="flex:1;font-size:13.5px">今天的牌發完了 · 明天再洗一副</span><span style="width:200px;flex:none;font-size:12.5px;color:#4E4A42">今天沒有更多了</span></div>
+
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(34,32,28,.24);font:11.5px/1.9 system-ui;color:#4E4A42">
+    <b>Deleted from v1:</b> <code>presence_in</code> / <code>presence_out</code> — the concept is gone. Where v1 showed 爐火已點 the book shows nothing at all; the only time his availability is expressed is offline, and it's expressed by hollowing the seal plus one sentence (<code>offline_note</code>).<br>
+    <b>Two rules for engineering:</b> <code>rating_tiers</code> is copy, not enum — store the enum, render the pack's label; and <code>tier_position</code> is not decorative, it is the accessible carrier of the four-tier scale, so it ships even when the tier row is visible.
+  </div>
+</div>
+</section>
+
+<section class="sec" id="vI">
+<div class="shd"><a class="sid" href="#vI">I</a><span class="sname">動態 — 過場 · 發牌 · 揭曉(press 播放)</span></div>
+<p class="snote">Two curves: <b>settle</b> <code>cubic-bezier(.2,.8,.3,1)</code> for anything that lands, <b>heat</b> <code>cubic-bezier(.4,0,.2,1)</code> for anything that glows or fills. Three buckets: <b>140ms</b> feedback, <b>280ms</b> transition, <b>620ms</b> ceremony — except the crossing, which is deliberately the longest thing in the app. Reduce Motion collapses everything to a 140ms cross-fade; the reveal keeps its cover, because the drama is the two-step, not the movement.</p>
+<div class="row">
+
+<div style="width:420px">
+<p class="cap">1 · 過場 · paper → stove</p>
+<div style="background:#EDEAE2;border:1px solid rgba(34,32,28,.16);padding:22px">
+  <div ref="{{ crossRef }}" style="position:relative;height:200px;overflow:hidden">
+    <div style="position:absolute;inset:0;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:18px;animation:crossOut .62s cubic-bezier(.4,0,.2,1) both">
+      <div style="font:9.5px 'Noto Sans TC',sans-serif;letter-spacing:.4em;color:#9B2C1E">備　料</div>
+      <div style="font-size:20px;margin-top:12px">先把東西都拿出來</div>
+      <div style="font-size:12px;color:#4E4A42;margin-top:14px;line-height:1.9">去骨雞腿排　2 塊<br>蔥　3 支</div>
+    </div>
+    <div style="position:absolute;inset:0;background:#0C0A09;color:#F4EFE6;font-family:'Noto Serif TC',serif;padding:18px;animation:crossIn .62s cubic-bezier(.4,0,.2,1) .34s both">
+      <div style="font:9.5px 'Noto Sans TC',sans-serif;letter-spacing:.4em;color:#C98A3E">步驟 一 / 四</div>
+      <div style="font-size:20px;font-weight:300;margin-top:12px">雞腿排兩面抹鹽</div>
+      <div style="position:absolute;left:-20%;right:-20%;bottom:-40%;height:80%;background:radial-gradient(50% 58% at 50% 100%,rgba(201,138,62,.34),transparent 68%);filter:blur(14px);animation:crossGlow .62s cubic-bezier(.4,0,.2,1) .5s both"></div>
+    </div>
+  </div>
+  <button onClick="{{ playCross }}" style="width:100%;margin-top:16px;font-family:'Noto Sans TC',sans-serif;font-size:12px;letter-spacing:.2em;color:#22201C;background:none;border:1px solid rgba(34,32,28,.3);padding:11px;cursor:pointer">播放</button>
+</div>
+<p class="capn">The signature transition, <b>940ms</b> — longer than anything else on purpose. The page doesn't slide away, it <b>dims</b>: paper darkens and desaturates in place over 620ms as if someone turned the kitchen light down, the stove page fades up from 340ms, and the burner glow only arrives at 500ms — light comes on last, the way a gas ring does. Reversed and 220ms faster on the way home, with the glow leaving first.</p>
+</div>
+
+<div style="width:420px">
+<p class="cap">2 · 發牌 · deal &amp; settle</p>
+<div style="background:#E7E2D8;border:1px solid rgba(34,32,28,.16);padding:22px">
+  <div ref="{{ dealRef }}" style="position:relative;height:200px;overflow:hidden">
+    <div style="position:absolute;inset:0;transform:rotate(1.5deg) translateY(7px);background:#DED7C8;box-shadow:0 8px 20px rgba(34,32,28,.14);animation:dealSettle .28s cubic-bezier(.2,.8,.3,1) .08s both"></div>
+    <div style="position:absolute;inset:0;background:#F7F4EC;box-shadow:0 16px 36px rgba(34,32,28,.2);padding:18px;animation:dealThrow .62s cubic-bezier(.2,.8,.3,1) both">
+      <div style="font:9.5px 'Noto Sans TC',sans-serif;letter-spacing:.42em;color:#9B2C1E">週　三</div>
+      <div style="font-family:'Noto Serif TC',serif;font-size:22px;margin-top:12px;color:#22201C">麻婆豆腐</div>
+      <span style="position:absolute;top:16px;right:16px;font-family:'Noto Serif TC',serif;font-size:17px;letter-spacing:.24em;color:#9B2C1E;border:2px solid #9B2C1E;padding:5px 10px;transform:rotate(-11deg)">排入</span>
+    </div>
+  </div>
+  <button onClick="{{ playDeal }}" style="width:100%;margin-top:16px;font-family:'Noto Sans TC',sans-serif;font-size:12px;letter-spacing:.2em;color:#22201C;background:none;border:1px solid rgba(34,32,28,.3);padding:11px;cursor:pointer">播放</button>
+</div>
+<p class="capn">Paper throws differently from a glass card: the sheet leaves along the drag vector at <b>280ms settle</b> with the rotation it already had at release, and its shadow shrinks as it goes so it reads as lifting off the desk. The next sheet settles from its resting tilt with a <b>80ms</b> delay. Stamps never animate — opacity is bound to drag distance and freezes at release.</p>
+</div>
+
+<div style="width:420px">
+<p class="cap">3 · 揭曉 · the reveal</p>
+<div style="background:#EDEAE2;border:1px solid rgba(34,32,28,.16);padding:22px">
+  <div ref="{{ revealRef }}" style="position:relative;height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+    <div style="font:9.5px 'Noto Sans TC',sans-serif;letter-spacing:.5em;color:#5E5A52">小當家的評價</div>
+    <div style="position:relative;width:100%;height:66px;display:flex;align-items:center;justify-content:center;margin-top:14px">
+      <span style="position:absolute;left:22px;height:1px;background:rgba(34,32,28,.28);width:70px;transform-origin:100% 50%;animation:ruleOut .28s cubic-bezier(.2,.8,.3,1) both"></span>
+      <span style="position:absolute;right:22px;height:1px;background:rgba(34,32,28,.28);width:70px;transform-origin:0 50%;animation:ruleOut .28s cubic-bezier(.2,.8,.3,1) both"></span>
+      <div style="position:absolute;font-family:'Noto Serif TC',serif;font-size:34px;letter-spacing:.4em;color:#C9C3B6;filter:blur(6px);animation:coverOut .28s cubic-bezier(.4,0,.2,1) both">神作</div>
+      <div style="position:absolute;font-family:'Noto Serif TC',serif;font-size:38px;font-weight:600;letter-spacing:.28em;text-indent:.28em;color:#22201C;animation:verdictIn .62s cubic-bezier(.2,.8,.3,1) .22s both">神作</div>
+    </div>
+    <div style="font:10.5px 'Noto Sans TC',sans-serif;letter-spacing:.26em;color:#4E4A42;margin-top:12px;animation:fadeUp .28s cubic-bezier(.2,.8,.3,1) .62s both">四級中的第一級</div>
+  </div>
+  <button onClick="{{ playReveal }}" style="width:100%;margin-top:16px;font-family:'Noto Sans TC',sans-serif;font-size:12px;letter-spacing:.2em;color:#22201C;background:none;border:1px solid rgba(34,32,28,.3);padding:11px;cursor:pointer">播放</button>
+</div>
+<p class="capn">Rules draw <b>outward from the centre</b> (280ms settle) as if the word is being set between them; the blurred cover clears (280ms heat); the verdict lands at +220ms over 620ms with tracking closing .40em→.28em — type being locked up in a forme. 四級中的第一級 follows at 620ms, commentary 200ms after that. Interruptible: a tap jumps to the end state.</p>
+</div>
+
+<div style="width:420px">
+<p class="cap">4 · 寫進書裡 · the note lands</p>
+<div style="background:#EDEAE2;border:1px solid rgba(34,32,28,.16);padding:22px">
+  <div ref="{{ slipRef }}" style="position:relative;height:200px;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:12px">
+    <div style="font-family:'Noto Serif TC',serif;font-size:13.5px;color:#22201C;line-height:2">下蔥薑與醬油,小火燜八分鐘。</div>
+    <div style="background:#F7F4EC;border-left:2px solid #9B2C1E;box-shadow:1px 2px 0 rgba(34,32,28,.1);padding:14px 16px;animation:slipIn .28s cubic-bezier(.2,.8,.3,1) both">
+      <div style="font:9.5px 'Noto Sans TC',sans-serif;letter-spacing:.3em;color:#9B2C1E">你問</div>
+      <div style="font:12.5px 'Noto Sans TC',sans-serif;font-weight:300;color:#3A362F;margin-top:7px">沒有米酒怎麼辦?</div>
+      <div style="margin-top:11px;padding-top:11px;border-top:1px solid rgba(34,32,28,.16);font-family:'Noto Serif TC',serif;font-size:13px;font-style:italic;line-height:1.9;color:#22201C;animation:fadeUp .28s cubic-bezier(.2,.8,.3,1) .5s both">「加四分之一小匙糖就好。」</div>
+    </div>
+  </div>
+  <button onClick="{{ playSlip }}" style="width:100%;margin-top:16px;font-family:'Noto Sans TC',sans-serif;font-size:12px;letter-spacing:.2em;color:#22201C;background:none;border:1px solid rgba(34,32,28,.3);padding:11px;cursor:pointer">播放</button>
+</div>
+<p class="capn">A slip <b>settles onto</b> the page — 280ms, small y-offset and a shadow that firms up, never a slide-in from an edge. His reply fades up inside the same slip once it's landed, so you see the question stick before the answer arrives. Used identically in 便條, 邊欄 and 講評.</p>
+</div>
+
+</div>
+<p class="snote" style="margin-top:22px"><b>What never animates:</b> ingredient and shopping checkmarks (instant — the stamp <i>is</i> the receipt), shopping rows re-sorting (they'd move under a wet finger), step text in Cook Mode (140ms opacity swap, no slide — the eye must not chase it at the stove), and page folios. <b>The burner flare from v1 is gone from paper entirely</b> — heat now only exists in 灶, which is exactly the point of the split.</p>
+</section>
+
+<section class="sec" id="vJ">
+<div class="shd"><a class="sid" href="#vJ">J</a><span class="sname">無障礙 — 大字級 · VoiceOver · 對比</span></div>
+<p class="snote">Paper helps more than it costs: ink on cream at 11px already clears AA where brass on black at 9px did not, and daylight legibility in a supermarket is solved by the ground itself. Three things still need work — gesture-free paths, CJK at AX sizes, and the fact that a blurred cover means nothing to VoiceOver.</p>
+<div class="row">
+
+<div><p class="cap">發牌 · AX sizes</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#E7E2D8;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px;display:flex;flex-direction:column">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 26px 0;font-family:'Noto Sans TC',sans-serif;font-size:13px;letter-spacing:.1em;color:#4E4A42"><span>本週儀式</span><span>關閉</span></div>
+  <div style="margin:12px 26px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+  <div style="padding:16px 26px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:17px;font-weight:500;line-height:1.5">已排 三 / 五 天</div>
+    <div style="margin-top:10px;height:3px;background:rgba(34,32,28,.18);position:relative"><div style="position:absolute;left:0;top:0;height:3px;background:#9B2C1E;width:60%"></div></div>
+  </div>
+
+  <div style="flex:1;min-height:0;margin:16px 26px 0;background:#F7F4EC;box-shadow:0 12px 28px rgba(34,32,28,.18);overflow:auto;padding:20px">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:15px;font-weight:700;color:#9B2C1E">週三</div>
+    <div style="font-size:29px;font-weight:500;line-height:1.4;margin-top:12px">麻婆豆腐</div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:15px;line-height:1.7;color:#4E4A42;margin-top:12px">二十五分 · 已煮三次 · 冰箱有豆腐</div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#9B2C1E;margin-top:10px">已依「沒有蝦」改過</div>
+    <div style="font-size:16px;font-style:italic;line-height:1.95;color:#3A362F;margin-top:14px;text-wrap:pretty">週三你們都晚回家 —— 這道二十五分鐘就能上桌。</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:9px;padding:16px 26px 0;font-family:'Noto Sans TC',sans-serif">
+    <button style="width:100%;min-height:54px;font-size:16px;font-weight:500;letter-spacing:.06em;color:#EDEAE2;background:#22201C;border:none;padding:15px;cursor:pointer">排入週三</button>
+    <div style="display:flex;gap:9px">
+      <button style="flex:1;min-height:54px;font-size:15px;color:#22201C;background:none;border:1px solid rgba(34,32,28,.4);padding:14px 8px;cursor:pointer">換一道</button>
+      <button style="flex:1;min-height:54px;font-size:15px;color:#22201C;background:none;border:1px solid rgba(34,32,28,.4);padding:14px 8px;cursor:pointer">補一句</button>
+    </div>
+  </div>
+</div>
+</x-import>
+<p class="capn">At AX sizes the sheet stops being throwable and becomes a scrollable panel with three stacked buttons labelled by <i>outcome</i>, never by gesture. Tracking relaxes to .06–.1em — wide tracking is the first thing that destroys CJK legibility at size — and the swipe hint is dropped rather than shrunk.</p></div>
+
+<div><p class="cap">VoiceOver · 揭曉與講評</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;padding:10px 30px 0;font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#5E5A52"><span>家常 · 雞</span><span>二三</span></div>
+  <div style="margin:14px 30px 0;height:1px;background:rgba(34,32,28,.2)"></div>
+
+  <div style="margin:22px 30px 0;border:2px solid #9B2C1E;padding:18px">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.3em;color:#5E5A52">聚焦框</div>
+    <div style="font-size:19px;font-weight:500;margin-top:11px">揭曉評價</div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;line-height:1.9;color:#4E4A42;margin-top:10px;text-wrap:pretty">按鈕。小當家已經評好了,輕點兩下揭曉。</div>
+  </div>
+  <div style="margin:11px 30px 0;font:11.5px ui-monospace,monospace;line-height:1.95;color:#4E4A42">label 揭曉評價<br>hint 小當家已經評好了,輕點兩下揭曉<br>trait .isButton</div>
+
+  <div style="margin:24px 30px 0;padding-top:18px;border-top:1px solid rgba(34,32,28,.2)">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#9B2C1E">揭曉後 · 依序朗讀</div>
+    <div style="display:flex;gap:12px;margin-top:14px"><span style="font-size:14px;color:#9B2C1E;width:16px">一</span><span style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;line-height:1.85">「評價:神作。四級中的第一級。」</span></div>
+    <div style="display:flex;gap:12px;margin-top:11px"><span style="font-size:14px;color:#9B2C1E;width:16px">二</span><span style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;line-height:1.85">「小當家寫道:雞皮脆得剛剛好…」</span></div>
+    <div style="display:flex;gap:12px;margin-top:11px"><span style="font-size:14px;color:#9B2C1E;width:16px">三</span><span style="flex:1;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;line-height:1.85">「第三次做,比上次快十分鐘。」</span></div>
+    <div style="margin-top:14px;font:11.5px ui-monospace,monospace;line-height:1.95;color:#4E4A42">announce(.screenChanged) → focus 評價<br>tier 一律唸「四級中的第 N 級」</div>
+  </div>
+
+  <div style="margin:24px 30px 0;padding-top:18px;border-top:1px solid rgba(34,32,28,.2)">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:10px;letter-spacing:.34em;color:#9B2C1E">其他必備標籤</div>
+    <div style="display:flex;flex-direction:column;gap:11px;margin-top:14px;font-family:'Noto Sans TC',sans-serif;font-size:13px;font-weight:300;line-height:1.8;color:#3A362F">
+      <div>計時器環 —「步驟二計時器,剩四分十二秒,暫停中。輕點兩下繼續。」</div>
+      <div>採買項目 —「蔥,一把,未購買。輕點兩下標記已買。」</div>
+      <div>眉批 —「小當家眉批:聽到滋滋聲變小就翻面。」</div>
+      <div>牌 —「週三的建議:麻婆豆腐。已依你的說明修改過。」</div>
+      <div>空心印 —「小當家目前無法回覆」(不是「灰色圖示」)</div>
+    </div>
+  </div>
+</div>
+</x-import>
+<p class="capn">The reveal announces twice — the tier <i>with its position in the scale</i> first, because a blurred cover and a four-tier row are both invisible to VoiceOver. Every seal state has words: filled = he answers, hollow = he can't.</p></div>
+
+<div><p class="cap">採買 · AX5 一手操作</p>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="height:100%;overflow:auto;background:#EDEAE2;color:#22201C;font-family:'Noto Serif TC',serif;padding:52px 0 34px">
+  <div style="padding:10px 26px 0">
+    <div style="font-size:24px;font-weight:500">採買清單</div>
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:16px;color:#4E4A42;margin-top:8px">還剩 六 項</div>
+  </div>
+  <div style="margin:14px 26px 0;height:2px;background:rgba(34,32,28,.2);position:relative"><div style="position:absolute;left:0;top:0;height:2px;background:#9B2C1E;width:40%"></div></div>
+
+  <div style="padding:20px 26px 0">
+    <div style="font-family:'Noto Sans TC',sans-serif;font-size:15px;font-weight:700;color:#9B2C1E">蔬果</div>
+    <div style="display:flex;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:62px">
+      <span style="width:30px;height:30px;flex:none;border:1.5px solid rgba(34,32,28,.5)"></span>
+      <div style="flex:1"><div style="font-size:20px;line-height:1.4">蔥</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#4E4A42;margin-top:4px">未購買</div></div>
+      <span style="font-size:18px;color:#4E4A42;font-variant-numeric:tabular-nums">1 把</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:62px;opacity:.55">
+      <span style="width:30px;height:30px;flex:none;background:#9B2C1E;color:#F2EDE3;font-size:16px;display:flex;align-items:center;justify-content:center">✓</span>
+      <div style="flex:1"><div style="font-size:20px;line-height:1.4;text-decoration:line-through">薑</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#4E4A42;margin-top:4px">已買</div></div>
+      <span style="font-size:18px;color:#4E4A42;font-variant-numeric:tabular-nums">1 塊</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid rgba(34,32,28,.14);min-height:62px">
+      <span style="width:30px;height:30px;flex:none;border:1.5px solid rgba(34,32,28,.5)"></span>
+      <div style="flex:1"><div style="font-size:20px;line-height:1.4">去骨雞腿排</div><div style="font-family:'Noto Sans TC',sans-serif;font-size:14px;color:#4E4A42;margin-top:4px">未購買</div></div>
+      <span style="font-size:18px;color:#4E4A42;font-variant-numeric:tabular-nums">4 塊</span>
+    </div>
+  </div>
+
+  <div style="margin:24px 26px 0;padding-top:18px;border-top:1px solid rgba(34,32,28,.2);font-family:'Noto Sans TC',sans-serif;font-size:14px;font-weight:300;line-height:1.9;color:#4E4A42;text-wrap:pretty">大字級下:分類標題不再是 tracked 小字,勾選狀態多一行文字,數量與品名分兩行而不壓縮。</div>
+</div>
+</x-import>
+<p class="capn">62pt rows, 30pt stamps, quantities that never truncate — the row grows instead. 已買 / 未購買 as words means the seal-red stamp is confirmation, not the only signal.</p></div>
+
+</div>
+<p class="snote" style="margin-top:22px"><b>Also required, no mockup needed:</b> Reduce Motion collapses section <a href="#vI">I</a> to 140ms cross-fades — including the crossing, which becomes a straight cut with the warning line still shown beforehand. Increase Contrast lifts rules from ink@20% to ink@42% and <code>inkFaint</code> to <code>inkDim</code>. Dark Mode at system level does <b>not</b> invert the book — paper stays paper; instead the stock dims to <code>#E2DED5</code> and the page brightness follows the system, because inverting a printed page destroys the whole premise. The deck supports VoiceOver's escape gesture to leave a ritual without swiping, and every timer fires a haptic <i>and</i> a sound, since the phone is usually across the counter.</p>
+</section></x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1400,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  state = { step: 1, stepSec: 360, stepRun: true, riceSec: 1140, riceRun: true,
+    serv: 2, checked: {}, revealed: false, narr: 0,
+    rIdx: 0, rFilled: 3, rdx: 0, rdy: 0, rDragging: false, noteOpen: false, mo: {} };
+
+  componentDidMount() { this.arm(); }
+  arm() {
+    if (this.iv) return;
+    this.iv = setInterval(() => this.setState(s => ({
+      stepSec: s.stepRun && s.stepSec > 0 ? s.stepSec - 1 : s.stepSec,
+      riceSec: s.riceRun && s.riceSec > 0 ? s.riceSec - 1 : s.riceSec,
+    })), 1000);
+    this.nv = setInterval(() => this.setState(s => ({ narr: (s.narr + 1) % 3 })), 2600);
+  }
+  componentWillUnmount() { clearInterval(this.iv); clearInterval(this.nv); this.iv = null; this.nv = null; }
+
+  fmt(s) { const m = Math.floor(s / 60), r = s % 60; return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r; }
+
+  steps() {
+    return [
+      { text: '雞腿排兩面抹鹽,靜置十分鐘。', tip: null, sec: 600 },
+      { text: '中火煎雞皮面六分鐘至金黃。', tip: '聽到滋滋聲變小就翻面 —— 早一分鐘,皮就軟了。', sec: 360 },
+      { text: '下蔥薑與醬油,小火燜八分鐘。', tip: '醬油沿鍋邊下,香氣才會出來。', sec: 480 },
+      { text: '切件鋪在白飯上,淋醬汁。', tip: null, sec: null },
+    ];
+  }
+
+  deck() {
+    return [
+      { day: '週三', dish: '麻婆豆腐', meta: '二十五分 · 已煮三次 · 冰箱有豆腐', updated: true,
+        line: '週三你們都晚回家 —— 這道二十五分鐘就能上桌。你說不要蝦,我改成純豆腐版了。' },
+      { day: '週四', dish: '蒜香蔗糖烤肋排', meta: '七十分 · 沒做過 · 你比較早回', updated: false,
+        line: '烤箱的事我來算,你只要顧最後五分鐘。第一次做,我全程陪著。' },
+      { day: '週五', dish: '韓式辣炒年糕', meta: '二十五分 · 沒做過 · 用完冰箱年糕', updated: false,
+        line: '那條年糕再放就硬了。週五收工累,這道甜辣的最對。' },
+      { day: '週六', dish: '番茄牛肉燉飯', meta: '六十分 · 週末場 · 可多煮一份', updated: false,
+        line: '週末有時間,慢慢燉。多煮一鍋,週日就不用開火了。' },
+    ];
+  }
+
+  goto(i) {
+    const st = this.steps();
+    const n = (i + st.length) % st.length;
+    this.setState({ step: n, stepSec: st[n].sec || 0, stepRun: false });
+  }
+
+  swipe(dir) {
+    this.setState(s => ({
+      rIdx: Math.min(s.rIdx + 1, this.deck().length),
+      rFilled: dir === 'left' ? s.rFilled : Math.min(s.rFilled + 1, 5),
+      rdx: 0, rdy: 0, rDragging: false, noteOpen: false,
+    }));
+  }
+
+  play(key) {
+    const el = this.refs2 && this.refs2[key];
+    if (!el || !el.getAnimations) return;
+    el.getAnimations({ subtree: true }).forEach(a => { a.cancel(); a.play(); });
+  }
+
+  setRef(key) {
+    if (!this.refs2) this.refs2 = {};
+    return (el) => { if (el) this.refs2[key] = el; };
+  }
+
+  renderVals() {
+    this.arm();
+    const st = this.steps();
+    const i = this.state.step;
+    const cur = st[i];
+    const scale = this.state.serv / 2;
+    const q = (n) => (Math.round(n * scale * 10) / 10).toString();
+
+    const ings = [['去骨雞腿排', 2, '塊'], ['蔥', 3, '支'], ['薑', 4, '片'], ['醬油', 2, '大匙'], ['米', 1.5, '杯']]
+      .map(([name, qty, unit], idx) => {
+        const on = !!this.state.checked[idx];
+        return {
+          name, qty: q(qty) + ' ' + unit, mark: on ? '✓' : '',
+          fill: on ? '#9B2C1E' : 'transparent', line: on ? '#9B2C1E' : 'rgba(34,32,28,.42)',
+          deco: on ? 'line-through' : 'none', op: on ? 0.5 : 1,
+          toggle: () => this.setState(s => ({ checked: Object.assign({}, s.checked, { [idx]: !s.checked[idx] }) })),
+        };
+      });
+
+    const d = this.deck();
+    const j = this.state.rIdx;
+    const dx = this.state.rdx, dy = this.state.rdy;
+    const blank = { day: '', dish: '', meta: '', line: '', updated: false };
+    const rc = (n) => Object.assign({}, d[j + n] || blank, { has: !!d[j + n] });
+    const cn = ['一', '二', '三', '四', '五'];
+
+    return {
+      narration: ['看菜單…', '配菜…', '寫清單…'][this.state.narr],
+      stepNum: cn[i], stepText: cur.text, stepTip: cur.tip,
+      nextLabel: i === st.length - 1 ? '上菜' : '下一步',
+      prev: () => this.goto(i - 1), next: () => this.goto(i + 1),
+      timer: this.fmt(this.state.stepSec),
+      timerBtn: this.state.stepSec === (cur.sec || 0) ? '開始' : (this.state.stepRun ? '暫停' : '繼續'),
+      toggleTimer: () => this.setState(s => ({ stepRun: !s.stepRun })),
+      ringDeg: Math.round(360 * (1 - (this.state.stepSec / (cur.sec || 1)))) + 'deg',
+      rice: this.fmt(this.state.riceSec),
+      toggleRice: () => this.setState(s => ({ riceRun: !s.riceRun })),
+      riceBtn: this.state.riceRun ? '暫停' : '繼續',
+      progBars: st.map((s, n) => ({ bg: n <= i ? '#C98A3E' : 'rgba(242,239,233,.2)' })),
+      prevStep: i > 0 ? st[i - 1].text : null,
+      nextStep: i < st.length - 1 ? st[i + 1].text : null,
+
+      ings,
+      recSteps: st.map((s, n) => ({ n: cn[n], text: s.text, tip: s.tip,
+        dur: s.sec ? '約 ' + Math.round(s.sec / 60) + ' 分鐘' : null })),
+      servLabel: this.state.serv + ' 人份',
+      lessServ: () => this.setState(s => ({ serv: Math.max(1, s.serv - 1) })),
+      moreServ: () => this.setState(s => ({ serv: Math.min(8, s.serv + 1) })),
+
+      revealed: this.state.revealed, hidden: !this.state.revealed,
+      reveal: () => this.setState({ revealed: true }),
+      hide: () => this.setState({ revealed: false }),
+
+      r0: rc(0), r1: rc(1), r2: rc(2), rDone: j >= d.length,
+      rTf: 'translate(' + dx + 'px, ' + dy + 'px) rotate(' + (dx * 0.05).toFixed(2) + 'deg)',
+      rTr: this.state.rDragging ? 'none' : 'transform .3s cubic-bezier(.2,.8,.3,1)',
+      rLike: Math.max(0, Math.min(1, dx / 80)), rNope: Math.max(0, Math.min(1, -dx / 80)),
+      rStart: (e) => { this._rx = e.clientX; this._ry = e.clientY; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {} this.setState({ rDragging: true }); },
+      rMove: (e) => { if (!this.state.rDragging) return; this.setState({ rdx: e.clientX - this._rx, rdy: e.clientY - this._ry }); },
+      rEnd: () => { const x = this.state.rdx; if (x > 80) this.swipe('right'); else if (x < -80) this.swipe('left'); else this.setState({ rDragging: false, rdx: 0, rdy: 0 }); },
+      rYes: () => this.swipe('right'), rNo: () => this.swipe('left'),
+      rReset: () => this.setState({ rIdx: 0, rFilled: 3, rdx: 0, rdy: 0 }),
+      rFilledCn: cn[this.state.rFilled - 1] || '零', rLeftCn: cn[4 - this.state.rFilled] || '零',
+      rPct: (this.state.rFilled / 5 * 100) + '%',
+      crossRef: this.setRef('cross'), dealRef: this.setRef('deal'),
+      revealRef: this.setRef('reveal'), slipRef: this.setRef('slip'),
+      playCross: () => this.play('cross'), playDeal: () => this.play('deal'),
+      playReveal: () => this.play('reveal'), playSlip: () => this.play('slip'),
+      noteOpen: this.state.noteOpen,
+      openNote: () => this.setState({ noteOpen: true }),
+      closeNote: () => this.setState({ noteOpen: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>
