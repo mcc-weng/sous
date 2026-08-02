@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import SwiftUI
 
 @MainActor
 final class AppModel: ObservableObject {
@@ -20,6 +21,10 @@ final class AppModel: ObservableObject {
     @Published var deviceTokenRegistrationError: String?
     @Published var preferencesContent: String?
     @Published var personaCopy: [String: String] = [:]
+    /// Persona accent colour, read from `personas.tint` at runtime — never hardcoded
+    /// in a view. Starts at `PaperTokens.sealFallback` until `loadPersonaCopy()`
+    /// resolves the real value (or falls back if it's missing/malformed).
+    @Published var personaTint: Color = PaperTokens.sealFallback
     @Published var onboardingRestartRequested = false
 
     init() {
@@ -163,8 +168,12 @@ final class AppModel: ObservableObject {
         guard let personaId = household?.personaId else { return }
         do {
             let row: PersonaCopyRow = try await client.from("personas")
-                .select("copy_pack").eq("id", value: personaId).single().execute().value
+                .select("copy_pack, tint").eq("id", value: personaId).single().execute().value
             personaCopy = row.copyPack
+            // Dynamic persona tint: parsed from the DB column, not baked in at
+            // compile time, so a future second persona is a data change. Falls back
+            // if `tint` is null or fails to parse (not a valid #RRGGBB hex string).
+            personaTint = row.tint.flatMap { color(fromHex: $0) } ?? PaperTokens.sealFallback
         } catch { print("persona copy load: \(error)") }
     }
 

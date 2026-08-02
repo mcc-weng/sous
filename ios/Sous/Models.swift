@@ -158,8 +158,14 @@ struct PreferencesRow: Codable {
 
 struct PersonaCopyRow: Codable {
     let copyPack: [String: String]
+    /// Hex string (e.g. `"#9B2C1E"`) from `personas.tint` — the persona's accent
+    /// colour, read at runtime rather than hardcoded, so a future second persona is a
+    /// data change, not a code change. Optional/nullable: `AppModel` falls back to
+    /// `PaperTokens.sealFallback` if this is missing or fails to parse.
+    let tint: String?
 
     enum CodingKeys: String, CodingKey {
         case copyPack = "copy_pack"
+        case tint
     }
 }

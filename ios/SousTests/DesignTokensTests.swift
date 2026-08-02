@@ -34,3 +34,30 @@ extension DesignTokensTests {
         XCTAssertEqual(FontBook.isSerifBundled, isBundled)
     }
 }
+
+/// `color(fromHex:)` is what turns `personas.tint` (read at runtime from the DB) into
+/// a renderable `Color`, so the persona accent colour is data, not a compile-time
+/// constant. These tests exercise the pure parsing function directly — no network,
+/// no AppModel — matching `PaperTokens.sealFallback`'s known #9B2C1E value so a
+/// regression here would silently break dynamic persona tinting app-wide.
+final class ColorFromHexTests: XCTestCase {
+    func testParsesSixDigitHexWithLeadingHash() {
+        XCTAssertEqual(color(fromHex: "#9B2C1E"), PaperTokens.sealFallback)
+    }
+
+    func testParsesSixDigitHexWithoutLeadingHash() {
+        XCTAssertEqual(color(fromHex: "9B2C1E"), PaperTokens.sealFallback)
+    }
+
+    func testParsingIsCaseInsensitive() {
+        XCTAssertEqual(color(fromHex: "#9b2c1e"), PaperTokens.sealFallback)
+    }
+
+    func testReturnsNilForMalformedInput() {
+        XCTAssertNil(color(fromHex: "not-a-color"))
+        XCTAssertNil(color(fromHex: "#12345"))    // too short
+        XCTAssertNil(color(fromHex: "#1234567"))  // too long
+        XCTAssertNil(color(fromHex: "#GGGGGG"))   // non-hex digits
+        XCTAssertNil(color(fromHex: ""))          // empty
+    }
+}

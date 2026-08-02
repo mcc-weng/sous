@@ -27,6 +27,19 @@ struct AuthView: View {
             .replacingOccurrences(of: ",", with: "\n")
     }
 
+    /// `auth_promise` copy_pack key (added in migration 0017) — the persona's
+    /// in-voice promise line under the headline rule.
+    private var promise: String {
+        model.personaCopy["auth_promise"]
+            ?? "小當家會記住你家的口味、排好這一週,然後在爐邊陪你把它煮出來。"
+    }
+
+    /// `auth_privacy_note` copy_pack key (added in migration 0017) — the footer
+    /// privacy note under the sign-in button.
+    private var privacyNote: String {
+        model.personaCopy["auth_privacy_note"] ?? "我們只存你家的口味與菜單"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
@@ -36,7 +49,7 @@ struct AuthView: View {
                 Text(kicker)
                     .font(.custom(sansName, size: 10))
                     .tracking(6.2) // .62em at 10pt
-                    .foregroundStyle(PaperTokens.seal)
+                    .foregroundStyle(model.personaTint)
                     .padding(.top, 30)
                 Text(headline)
                     .font(.custom(serifName, size: 38))
@@ -51,7 +64,7 @@ struct AuthView: View {
                     .fill(PaperTokens.leader) // ink @ 30%
                     .frame(width: 24, height: 1)
                     .padding(.vertical, Spacing.lg)
-                Text("小當家會記住你家的口味、\n排好這一週,\n然後在爐邊陪你把它煮出來。")
+                Text(promise)
                     .font(.custom(serifName, size: 14))
                     .lineSpacing(14) // lh 2.2 (see headline comment on the formula)
                     .multilineTextAlignment(.center)
@@ -79,7 +92,7 @@ struct AuthView: View {
                         .padding(.top, Spacing.sm)
                 }
 
-                Text("我們只存你家的口味與菜單")
+                Text(privacyNote)
                     .font(.custom(sansName, size: 10.5))
                     .tracking(1.68) // .16em at 10.5pt
                     .lineSpacing(8.4) // lh 2 (see headline comment on the formula)
@@ -100,7 +113,7 @@ struct AuthView: View {
             .font(.custom(serifName, size: 18))
             .foregroundStyle(PaperTokens.slip)
             .frame(width: 40, height: 40)
-            .background(PaperTokens.seal)
+            .background(model.personaTint)
     }
 
     private func handle(_ result: Result<ASAuthorization, Error>) async {

@@ -8,10 +8,14 @@ enum PaperTokens {
     static let ink = Color(red: 0x22 / 255, green: 0x20 / 255, blue: 0x1C / 255)
     static let inkDim = Color(red: 0x4E / 255, green: 0x4A / 255, blue: 0x42 / 255)
     static let inkFaint = Color(red: 0x5E / 255, green: 0x5A / 255, blue: 0x52 / 255)
-    /// `paper.seal` (README design-tokens table) — the one spot colour, once per page.
-    /// Missing from Task 1's foundation pass; added here since it's needed by nearly
-    /// every remaining screen task and every call site must go through a named token.
-    static let seal = Color(red: 0x9B / 255, green: 0x2C / 255, blue: 0x1E / 255)
+    /// `paper.seal` (README design-tokens table) fallback only — the accent colour is
+    /// persona-tintable and must come from `personas.tint` at runtime (`AppModel.
+    /// personaTint`, parsed via `color(fromHex:)`), never baked in at compile time.
+    /// This constant exists solely as the value `AppModel.personaTint` starts at
+    /// before persona data loads, and what it falls back to if a persona's `tint` is
+    /// missing or malformed. Views must read `model.personaTint`, not this token,
+    /// for the seal/accent colour.
+    static let sealFallback = Color(red: 0x9B / 255, green: 0x2C / 255, blue: 0x1E / 255)
     static let rule = ink.opacity(0.20)
     static let ruleStrong = ink.opacity(0.42)
     static let leader = ink.opacity(0.30)
@@ -33,6 +37,22 @@ func serifFontName(bundled: Bool) -> String {
 
 func sansFontName(bundled: Bool) -> String {
     bundled ? "NotoSansTC-Regular" : "PingFang TC"
+}
+
+/// Parses a `#RRGGBB` (leading `#` optional, case-insensitive) hex string — the shape
+/// `personas.tint` is stored in — into a SwiftUI `Color`. Pure and side-effect free so
+/// it's independently testable; returns `nil` rather than crashing on anything that
+/// isn't exactly 6 hex digits, so a malformed or missing DB value can't take the app
+/// down. Callers (`AppModel.loadPersonaCopy`) fall back to `PaperTokens.sealFallback`
+/// when this returns `nil`.
+func color(fromHex hex: String) -> Color? {
+    var digits = hex
+    if digits.hasPrefix("#") { digits.removeFirst() }
+    guard digits.count == 6, let value = UInt32(digits, radix: 16) else { return nil }
+    let red = Double((value >> 16) & 0xFF) / 255
+    let green = Double((value >> 8) & 0xFF) / 255
+    let blue = Double(value & 0xFF) / 255
+    return Color(red: red, green: green, blue: blue)
 }
 
 /// Determines whether the bundled Noto faces are actually registered at runtime, by
