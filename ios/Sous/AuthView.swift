@@ -41,7 +41,9 @@ struct AuthView: View {
                 Text(headline)
                     .font(.custom(serifName, size: 38))
                     .tracking(1.9) // .05em at 38pt
-                    .lineSpacing(19) // lh 1.5
+                    .lineSpacing(11) // lh 1.5 (lineSpacing adds to the font's own
+                    // ~1.2x leading rather than replacing it, so the naive
+                    // (multiplier-1)*size formula overshoots by ~0.2*size)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(PaperTokens.ink)
                     .padding(.top, 22)
@@ -51,7 +53,7 @@ struct AuthView: View {
                     .padding(.vertical, Spacing.lg)
                 Text("小當家會記住你家的口味、\n排好這一週,\n然後在爐邊陪你把它煮出來。")
                     .font(.custom(serifName, size: 14))
-                    .lineSpacing(16.8) // lh 2.2
+                    .lineSpacing(14) // lh 2.2 (see headline comment on the formula)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(PaperTokens.inkDim)
             }
@@ -80,7 +82,7 @@ struct AuthView: View {
                 Text("我們只存你家的口味與菜單")
                     .font(.custom(sansName, size: 10.5))
                     .tracking(1.68) // .16em at 10.5pt
-                    .lineSpacing(10.5) // lh 2
+                    .lineSpacing(8.4) // lh 2 (see headline comment on the formula)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(PaperTokens.inkFaint)
                     .padding(.top, 18)
