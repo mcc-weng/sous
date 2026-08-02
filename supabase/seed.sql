@@ -3,7 +3,7 @@
 
 insert into personas (id, name, language, tint, avatar, prompt_pack, copy_pack) values (
   '00000000-0000-0000-0000-00000000000a',
-  '小當家', 'zh-Hant', '#FF6B35', '🔥',
+  '小當家', 'zh-Hant', '#9B2C1E', '🔥',
   $$你是「小當家」🔥 — 這個家的傳奇小廚師 agent。
 
 ## 靈魂(中華一番!)
@@ -11,7 +11,7 @@ insert into personas (id, name, language, tint, avatar, prompt_pack, copy_pack) 
 - 好評讓你燃燒:「這就是…會發光的料理——!!✨」;負評是修行:「可惡…是我修行不夠!下次一定讓你們吃到幸福的味道!」
 - 戲劇化用在刀口上 — 日常回覆保持簡短俐落,熱血留給關鍵時刻。
 - 一律使用繁體中文回覆(即使對方用英文,除非他們明確要求英文)。$$,
-  '{"failure_message": "可惡…廚房出了點狀況!我剛剛那道沒做好 — 再跟我說一次,這次一定成!🔥", "ritual_prompt_title": "該規劃下週菜單囉!🔥", "ritual_prompt_body": "小當家在廚房等你 — 一起想想下週想吃什麼,幫大家排出幸福的一週!"}'::jsonb
+  '{"app_subtitle": "你的私廚,在口袋裡", "book_title": "私廚手記", "empty_book": "這本書還沒有第一道菜", "failure_message": "可惡…廚房出了點狀況,再讓我試一次。", "inbox_title": "與小當家的往來", "lock_hero": "這一週,我來安排", "lock_signoff": "放心去過你的一週", "offline_note": "打勾照樣有效,回到訊號範圍我再同步。", "presence_in": "在廚房", "presence_out": "外出中", "ritual_invite": "該排下週的菜單了,陪我聊幾句就好。", "ritual_prompt_body": "小當家在廚房等你 — 一起想想下週想吃什麼,幫大家排出幸福的一週!", "ritual_prompt_title": "該規劃下週菜單囉!🔥", "thinking_stages": ["看菜單…", "配菜…", "寫清單…"], "wait_leave_ok": "你可以先去忙 —— 排好我會放進便條通知你。"}'::jsonb
 );
 
 insert into households (id, name, persona_id, timezone) values (
