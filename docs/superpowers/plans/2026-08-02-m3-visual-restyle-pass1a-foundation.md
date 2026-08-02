@@ -78,12 +78,12 @@ final class DesignTokensTests: XCTestCase {
     }
 
     func testSerifFontNameFallsBackToSystemSerifWhenNotBundled() {
-        // Songti TC is iOS's built-in Traditional Chinese serif — a real fallback,
-        // not a sans substitute, since the serif/sans split carries real meaning
-        // (小當家's voice vs. interface chrome) and a sans fallback would silently
-        // erase that distinction everywhere at once.
-        XCTAssertEqual(serifFontName(bundled: false), "PingFang TC")
-        // ^ placeholder assertion corrected in Step 3 to the actual system serif name
+        // Songti TC (PostScript name STSongti-TC-Regular) is iOS's built-in
+        // Traditional Chinese serif — a real fallback, not a sans substitute, since
+        // the serif/sans split carries real meaning (小當家's voice vs. interface
+        // chrome) and a sans fallback would silently erase that distinction everywhere
+        // at once.
+        XCTAssertEqual(serifFontName(bundled: false), "STSongti-TC-Regular")
     }
 
     func testSansFontNameUsesBundledFaceWhenAvailable() {
@@ -104,11 +104,10 @@ Expected: FAIL — `serifFontName`/`sansFontName` not defined.
 
 - [ ] **Step 3: Write `DesignTokens.swift`**
 
-Before writing, resolve the real system serif fallback: iOS ships **Songti TC** as a
-system Traditional Chinese serif face (`PostScript` family name `STSongti-TC-Regular` on
-recent iOS). Use that, not PingFang TC (a sans), for the serif fallback — fix the test
-above to assert `"STSongti-TC-Regular"` instead of `"PingFang TC"` before implementing,
-since the placeholder in Step 1 was deliberately wrong to force this check.
+The serif fallback is **Songti TC** (`PostScript` family name `STSongti-TC-Regular`) —
+iOS's built-in Traditional Chinese serif, matching Step 1's test. Do not use PingFang TC
+(a sans face) as the serif fallback; the sans fallback in these functions is for
+`sansFontName` only.
 
 ```swift
 // ios/Sous/DesignTokens.swift
