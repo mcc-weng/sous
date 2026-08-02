@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum PaperTokens {
     static let stock = Color(red: 0xED / 255, green: 0xEA / 255, blue: 0xE2 / 255)
@@ -28,4 +29,16 @@ func serifFontName(bundled: Bool) -> String {
 
 func sansFontName(bundled: Bool) -> String {
     bundled ? "NotoSansTC-Regular" : "PingFang TC"
+}
+
+/// Determines whether the bundled Noto faces are actually registered at runtime, by
+/// checking `UIFont.familyNames` (populated from files + `UIAppFonts` in Info.plist).
+/// Call sites pass this into `serifFontName(bundled:)` / `sansFontName(bundled:)`.
+enum FontBook {
+    static var isSerifBundled: Bool {
+        UIFont.familyNames.contains { $0.contains("Noto Serif TC") }
+    }
+    static var isSansBundled: Bool {
+        UIFont.familyNames.contains { $0.contains("Noto Sans TC") }
+    }
 }

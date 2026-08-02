@@ -29,6 +29,13 @@ targets:
       properties:
         UILaunchScreen: {}
         CFBundleDisplayName: Sous
+        UIAppFonts:
+          - NotoSerifTC-Regular.otf
+          - NotoSerifTC-Medium.otf
+          - NotoSerifTC-SemiBold.otf
+          - NotoSansTC-Light.otf
+          - NotoSansTC-Regular.otf
+          - NotoSansTC-Medium.otf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikeweng.sous
