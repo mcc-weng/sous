@@ -1,7 +1,8 @@
 # M3 Visual Restyle — 書與灶 Design System (Pass 1 of 2)
 
 **Date:** 2026-08-02
-**Status:** Draft — pending Mike's review before `writing-plans`
+**Status:** Approved (2026-08-02) — including the two inferred boundaries in §4
+(grading flip and 邊欄 rearchitecture deferred to Pass 2), confirmed by Mike
 **Source:** Claude Design handoff, `design_handoff_sous_m3/README.md` — the primary
 reference for exact token values, per-screen layout, motion, and accessibility rules.
 **This doc does not restate those values.** It records the corrections and
