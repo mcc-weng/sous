@@ -159,8 +159,13 @@ struct CounterView: View {
                     .padding(.top, 13)
             }
 
-            photoPlate
-                .padding(.top, 22)
+            // Only shown once there's an actual tonight row — an always-on "dish
+            // photo" placeholder next to the empty_book fallback text would show a
+            // photo slot for a dish that doesn't exist, which reads as incoherent.
+            if model.tonight != nil {
+                photoPlate
+                    .padding(.top, 22)
+            }
 
             if let recipe = tonightRecipe {
                 VStack(spacing: 0) {
