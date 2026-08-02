@@ -8,6 +8,10 @@ enum PaperTokens {
     static let ink = Color(red: 0x22 / 255, green: 0x20 / 255, blue: 0x1C / 255)
     static let inkDim = Color(red: 0x4E / 255, green: 0x4A / 255, blue: 0x42 / 255)
     static let inkFaint = Color(red: 0x5E / 255, green: 0x5A / 255, blue: 0x52 / 255)
+    /// `paper.seal` (README design-tokens table) — the one spot colour, once per page.
+    /// Missing from Task 1's foundation pass; added here since it's needed by nearly
+    /// every remaining screen task and every call site must go through a named token.
+    static let seal = Color(red: 0x9B / 255, green: 0x2C / 255, blue: 0x1E / 255)
     static let rule = ink.opacity(0.20)
     static let ruleStrong = ink.opacity(0.42)
     static let leader = ink.opacity(0.30)
