@@ -75,6 +75,19 @@ as:
   running head, where presence used to live — flag during planning if the hollow-seal
   treatment doesn't read cleanly there.
 
+## 3b. Correction to the original product spec: paper-first, not dark-mode-first
+
+Confirmed 2026-08-02: the original product spec's "dark-mode-first" constraint is
+**superseded** by the approved 書與灶 design. Per the handoff README: "System Dark Mode
+does not invert the book. Paper stays paper... Inverting a printed page destroys the
+premise." Nearly every screen (Auth, Kitchen Counter, Chat, ritual, Shopping, Week Board,
+Cookbook, Recipe Detail, Onboarding, Settings) uses the warm paper palette
+(`paper.stock` `#EDEAE2` and friends) regardless of system appearance. Only three screens
+are ever dark: Cook Mode's step teleprompter, the timer state, and 上菜 (the `stage.*`
+tokens) — deliberately, because "if your hands are busy and something is counting, dark;
+everything else is paper." This is an intentional trade-off accepted for this pass, not
+an oversight — flagging it here so it isn't silently lost the way presence almost was.
+
 ## 4. Explicitly NOT in Pass 1 (deferred to Pass 2)
 
 - **Explore Deck (D3) and Ritual Swipe Session (B1)** — new full-screen surfaces, not
