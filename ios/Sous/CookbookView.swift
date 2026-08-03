@@ -25,17 +25,23 @@ import SwiftUI
 ///
 /// Scope note — filter chips: the mock shows 全部/神作/三十分內/還沒煮過 as tappable
 /// chips, and the task brief's acceptance criteria names "filter chips" as a required
-/// visual element, so this renders all four. But only one is honestly wireable: 神作
-/// needs verdict data, and this screen has none loaded across the whole book —
+/// visual element, so this renders all four — but only 還沒煮過 is a live control.
+/// 神作 needs verdict data, and this screen has none loaded across the whole book —
 /// `RecipeDetailView` only fetches verdicts for one recipe at a time (a
 /// `plan_days`-joined query), and repeating that per row here would be an N+1 fetch
 /// across the whole list, i.e. new data-fetching, out of a restyle's scope. 三十分內
 /// needs a prep-duration field `Recipe` doesn't have at all — no amount of local
-/// computation can derive it. 還沒煮過 (cookCount == 0) *is* derivable from data
-/// already loaded here, but wiring only one of four chips live would be a worse,
-/// inconsistent affordance than wiring none — three dead taps next to one live one,
-/// with no visual distinction between them. So the whole row stays decorative this
-/// pass: visually matches the mock, but no chip changes the list on tap yet.
+/// computation can derive it. Both render as plain muted labels (no border/fill, no
+/// tap target) rather than styled-but-dead chips, so they don't promise interactivity
+/// they can't deliver. 全部 is *not* data-blocked the way those two are — "show
+/// everything" needs nothing — but it's redundant with the toggle-off state (turning
+/// 還沒煮過 back off already shows everything), so rather than add a second live
+/// control that only ever mirrors the first one's negation, it stays a plain label
+/// too, preserving the mock's 4-chip visual rhythm without a fake second button.
+/// 還沒煮過 (cookCount == 0, `CookHistoryLogic.cookCount` — already loaded, already
+/// used for the row meta line below) *is* real: tapping it toggles `showOnlyUncooked`
+/// and layers a client-side filter on top of `filteredRecipes` in `orderedRecipes`,
+/// so it gets the full selected/unselected chip affordance the other three don't.
 ///
 /// Scope note — row meta line: the mock's second column reads "attempts · verdict"
 /// (e.g. `五次 · 神作`). Verdict text isn't available at this screen for the reason
@@ -55,6 +61,10 @@ import SwiftUI
 struct CookbookView: View {
     @EnvironmentObject private var model: AppModel
     @State private var query = ""
+    /// Backing state for the one live filter chip (還沒煮過) — view-only, layered on
+    /// top of `filteredRecipes` in `orderedRecipes` below. Not part of
+    /// `CookbookLogic.swift`'s search/filter engine; this is presentation-layer only.
+    @State private var showOnlyUncooked = false
 
     private var serifName: String { serifFontName(bundled: FontBook.isSerifBundled) }
     private var sansName: String { sansFontName(bundled: FontBook.isSansBundled) }
@@ -75,10 +85,15 @@ struct CookbookView: View {
     }
 
     /// The rows actually displayed — search-filtered (via the existing, unchanged
-    /// `filteredRecipes`), same alphabetical order as the full book.
+    /// `filteredRecipes`), then further narrowed by the 還沒煮過 chip's local toggle
+    /// when active (client-side, on top of what's already loaded — not a change to
+    /// `CookbookLogic.swift`'s filter engine), same alphabetical order as the full book.
     private var orderedRecipes: [Recipe] {
-        filteredRecipes(model.recipes, query: query)
-            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        let searched = filteredRecipes(model.recipes, query: query)
+        let scoped = showOnlyUncooked
+            ? searched.filter { cookCount(sessions: model.cookSessions, recipeId: $0.id) == 0 }
+            : searched
+        return scoped.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
 
     var body: some View {
@@ -141,18 +156,26 @@ struct CookbookView: View {
             .padding(.top, 18)
     }
 
-    // MARK: Filter chips (decorative — see file-header scope note)
+    // MARK: Filter chips — one live (還沒煮過), three decorative (see file-header scope note)
 
     private var filterChips: some View {
         HStack(spacing: 7) {
-            filterChip("全部", selected: true)
-            filterChip("神作", selected: false)
-            filterChip("三十分內", selected: false)
-            filterChip("還沒煮過", selected: false)
+            decorativeChipLabel("全部")
+            decorativeChipLabel("神作")
+            decorativeChipLabel("三十分內")
+            Button {
+                showOnlyUncooked.toggle()
+            } label: {
+                filterChip("還沒煮過", selected: showOnlyUncooked)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.top, 14)
+        .animation(.easeInOut(duration: 0.15), value: showOnlyUncooked)
     }
 
+    /// The one real, tappable chip — full selected/unselected chip affordance (border
+    /// or fill) because it genuinely does something on tap.
     private func filterChip(_ label: String, selected: Bool) -> some View {
         Text(label)
             .font(.custom(sansName, size: 11))
@@ -169,6 +192,18 @@ struct CookbookView: View {
             }
     }
 
+    /// The three not-currently-wireable labels (全部/神作/三十分內) — deliberately
+    /// *not* built on `filterChip`: no border, no fill, no tap target, faint ink. Keeps
+    /// the mock's 4-label row present without dressing static text up as a button.
+    private func decorativeChipLabel(_ label: String) -> some View {
+        Text(label)
+            .font(.custom(sansName, size: 11))
+            .tracking(0.66) // .06em at 11pt
+            .foregroundStyle(PaperTokens.inkFaint)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 11)
+    }
+
     // MARK: Table of contents
 
     @ViewBuilder
@@ -176,9 +211,9 @@ struct CookbookView: View {
         if model.recipes.isEmpty {
             emptyState(model.personaCopy["empty_book"] ?? "這本書還沒有第一道菜")
         } else if orderedRecipes.isEmpty {
-            // A search with no matches — distinct from an empty book. Plain neutral UI
-            // copy (not persona voice), same precedent as the hardcoded "搜尋食譜"
-            // placeholder above.
+            // A search and/or the 還沒煮過 toggle excluding every recipe — distinct
+            // from an empty book. Plain neutral UI copy (not persona voice), same
+            // precedent as the hardcoded "搜尋食譜" placeholder above.
             emptyState("沒有符合的食譜")
         } else {
             VStack(alignment: .leading, spacing: 0) {
