@@ -1,5 +1,39 @@
 import SwiftUI
 
+/// E2 · 本週 (week board) — Reference: design_handoff_sous_m3/README.md "E2 · 本週
+/// (week board)" and `Sous App v2.dc.html` lines 683-717.
+///
+/// Container note: this screen moved off `List`/`Section` onto a plain
+/// `ScrollView`/`VStack` composition, same call `ShoppingListView` already made and for
+/// the same reason — `List`'s default row/section inset chrome fights the paper
+/// design's precise "printed table" spacing, and this screen uses no `List`-only
+/// feature (no swipe actions, no `.onDelete`) that the move would break. The existing
+/// long-press-to-select-then-swap gesture (see `handleLongPress`'s own comment for why
+/// it replaced drag-and-drop) is plain `onTapGesture`/`onLongPressGesture`, which is
+/// container-agnostic and carries over unchanged.
+///
+/// Scope note — dual ritual entry: the README shows next week offering both ritual
+/// models by name ("ink-filled 滑牌排 and outlined 用寫的"). Pass 1a has no swipe ritual
+/// to link a second button to — that's Pass 2, a separate future plan — so this keeps
+/// the single existing 開始本週儀式 entry point, restyled to the button language
+/// (`PaperTokens.ink` fill, `PaperTokens.stock` text) but pointing at the same
+/// `model.startRitual()` written ritual as before.
+///
+/// Scope note — cooked-day "verdict": the mock's 神作/普通 captions on cooked days are
+/// real verdict text (the `verdicts` table, keyed by `plan_day_id`). `PlanDay` itself
+/// carries no verdict field, and this task's scope is this file only with no new data
+/// loading — fetching per-day verdicts would mean new `AppModel` queries, out of scope
+/// for a restyle pass. Cooked/skipped days instead get the one verdict-adjacent value
+/// actually on `PlanDay` today: `status`, via the existing `statusLabel` (已煮/skip).
+///
+/// Scope note — tonight's "開始" button: the mock's slip row for tonight includes a
+/// 開始 button. `WeekBoardView` has no existing path into `CookModeView` (that lives on
+/// `CounterView`, wired to `model.tonight`/`model.recipes`); adding one here would be
+/// new navigation, which the brief's scope guard excludes from a restyle. Per the same
+/// principle `RitualWaitingCard`'s doc comment already applies (no buttons promising
+/// behavior the app doesn't have), this omits the button — the slip background,
+/// seal-tint left border, and "今晚" caption still carry the "this is tonight" signal
+/// without it.
 struct WeekBoardView: View {
     @EnvironmentObject private var model: AppModel
     @State private var expandedDayID: UUID?
@@ -26,18 +60,40 @@ struct WeekBoardView: View {
     private var serifName: String { serifFontName(bundled: FontBook.isSerifBundled) }
     private var sansName: String { sansFontName(bundled: FontBook.isSansBundled) }
 
+    private var householdTimezone: TimeZone {
+        guard let identifier = model.household?.timezone else { return .current }
+        return TimeZone(identifier: identifier) ?? .current
+    }
+
+    /// Today's date as "YYYY-MM-DD" in household time — the sole test a day row needs
+    /// to render as the page's one "slip" (tonight). Computed fresh per render rather
+    /// than cached in `@State`: cheap, and avoids a stale value if the sheet is left
+    /// open across midnight.
+    private var todayString: String { dateString(Date(), timezone: householdTimezone) }
+
     var body: some View {
-        List {
-            Section("這週") {
-                ForEach(model.thisWeekDays) { day in
-                    dayRow(day)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                runningHead("這週")
+                VStack(spacing: 0) {
+                    ForEach(model.thisWeekDays) { day in dayRow(day) }
                 }
+                .padding(.top, 14)
+
+                Text("長按兩天可對調")
+                    .font(.custom(sansName, size: 10.5))
+                    .tracking(1.47) // .14em at 10.5pt
+                    .foregroundStyle(PaperTokens.inkFaint)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 12)
+
+                nextWeekSection
             }
-            Section("下週") {
-                nextWeekContent
-            }
+            .padding(.horizontal, Spacing.pageMargin)
+            .padding(.top, Spacing.md)
+            .padding(.bottom, Spacing.lg)
         }
-        .listStyle(.plain)
+        .background(PaperTokens.stock)
         .onChange(of: model.nextWeekDays) { _, _ in pendingSwapDates.removeAll(); selectedForSwap = nil }
         .onChange(of: model.thisWeekDays) { _, _ in pendingSwapDates.removeAll(); selectedForSwap = nil }
         .onChange(of: model.nextWeek) { old, new in
@@ -46,6 +102,37 @@ struct WeekBoardView: View {
             }
         }
         .task { await model.loadWeekBoard() }
+    }
+
+    // MARK: Running heads
+
+    /// Section running head — sans, tracked, `inkFaint`, with a hairline rule beneath.
+    /// Mirrors the mock's "本週菜單"/"下週" label typography (README E2 top strip).
+    private func runningHead(_ title: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.custom(sansName, size: 10))
+                .tracking(3.4) // .34em at 10pt
+                .foregroundStyle(PaperTokens.inkFaint)
+            Rectangle()
+                .fill(PaperTokens.rule)
+                .frame(height: 1)
+                .padding(.top, 10)
+        }
+    }
+
+    private var nextWeekSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Rectangle().fill(PaperTokens.rule).frame(height: 1)
+            Text("下週")
+                .font(.custom(sansName, size: 10))
+                .tracking(3.4) // .34em at 10pt
+                .foregroundStyle(PaperTokens.inkFaint)
+                .padding(.top, 20)
+            nextWeekContent
+                .padding(.top, 4)
+        }
+        .padding(.top, 26)
     }
 
     @ViewBuilder
@@ -60,11 +147,7 @@ struct WeekBoardView: View {
                     startedAt: ritualWaitStartedAt
                 )
             } else {
-                Button("開始本週儀式") {
-                    pendingRitualStart = true
-                    ritualWaitStartedAt = Date()
-                    Task { await model.startRitual() }
-                }
+                startRitualPrompt
             }
         case .ritualInProgress:
             Text("本週儀式進行中 — 到聊天室繼續")
@@ -74,8 +157,40 @@ struct WeekBoardView: View {
             if justLockedWeekOf != nil, justLockedWeekOf == model.nextWeek?.weekOf {
                 lockCelebration
             }
-            ForEach(days) { day in dayRow(day) }
+            VStack(spacing: 0) {
+                ForEach(days) { day in dayRow(day) }
+            }
         }
+    }
+
+    /// Single ritual entry point — the "還沒排 —— 現在排嗎?" prompt plus one ink-filled
+    /// button, per the scope note above (no second, outlined 用寫的 button).
+    private var startRitualPrompt: some View {
+        VStack(spacing: 16) {
+            Text("還沒排 —— 現在排嗎?")
+                .font(.custom(serifName, size: 17))
+                .lineSpacing(8.5) // lh 1.7 at 17pt: (1.7 - 1.2) * 17
+                .foregroundStyle(PaperTokens.ink)
+                .multilineTextAlignment(.center)
+
+            Button {
+                pendingRitualStart = true
+                ritualWaitStartedAt = Date()
+                Task { await model.startRitual() }
+            } label: {
+                Text("開始本週儀式")
+                    .font(.custom(sansName, size: 12))
+                    .fontWeight(.medium)
+                    .tracking(2.4) // .2em at 12pt
+                    .foregroundStyle(PaperTokens.stock)
+                    .frame(maxWidth: .infinity)
+                    .padding(13)
+                    .background(PaperTokens.ink)
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 6)
     }
 
     /// B3 · 鎖定 (lock) — Reference: design_handoff_sous_m3/README.md "B3 · 鎖定 (lock)"
@@ -116,43 +231,165 @@ struct WeekBoardView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 18)
-        .listRowSeparator(.hidden)
+        .listRowSeparator(.hidden) // inert outside List; left as Task 7 wrote it.
     }
+
+    // MARK: Day rows
 
     @ViewBuilder
     private func dayRow(_ day: PlanDay) -> some View {
         if pendingSwapDates.contains(day.date) {
-            pendingRow(text: "對調中…")
+            pendingSwapRow(day)
+        } else if day.date == todayString {
+            tonightRow(day)
         } else {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(day.dish)
-                    Text(day.mode).font(.caption).foregroundStyle(.secondary)
-                    if day.status != "planned" {
-                        Text(statusLabel(day.status)).font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if selectedForSwap == day.date {
-                        Image(systemName: "arrow.left.arrow.right.circle.fill")
-                            .foregroundStyle(Color.accentColor)
-                    }
-                    if let prep = day.prepNote {
-                        Text(prep).font(.caption2).foregroundStyle(.secondary)
-                    }
-                }
-                if expandedDayID == day.id, let reasoning = day.reasoning {
-                    Text(reasoning).font(.caption).foregroundStyle(.secondary)
+            standardRow(day)
+        }
+    }
+
+    /// A closed (cooked/skipped) or upcoming day — printed-table row: weekday glyph,
+    /// dish, a trailing caption chosen by `rowCaption`, dimmed to 55% once the day's
+    /// story is closed (README E2: "cooked days fade and keep their verdict").
+    private func standardRow(_ day: PlanDay) -> some View {
+        let closed = day.status == "cooked" || day.status == "skipped"
+        let selected = selectedForSwap == day.date
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 14) {
+                Text(weekdayGlyph(for: day.date))
+                    .font(.custom(serifName, size: 15))
+                    .foregroundStyle(selected ? model.personaTint : PaperTokens.ink)
+                    .frame(width: 18, alignment: .leading)
+                Text(day.dish)
+                    .font(.custom(serifName, size: 14.5))
+                    .foregroundStyle(PaperTokens.ink)
+                Spacer(minLength: 8)
+                if let caption = rowCaption(day) {
+                    Text(caption.text)
+                        .font(.custom(sansName, size: 10.5))
+                        .tracking(1.05) // .1em at 10.5pt
+                        .foregroundStyle(caption.color)
+                        .lineLimit(1)
                 }
             }
-            .contentShape(Rectangle())
-            .listRowBackground(selectedForSwap == day.date ? Color.accentColor.opacity(0.15) : nil)
-            .onTapGesture {
-                expandedDayID = expandedDayID == day.id ? nil : day.id
-            }
-            .onLongPressGesture {
-                handleLongPress(on: day.date)
+            if expandedDayID == day.id, let reasoning = day.reasoning {
+                Text(reasoning)
+                    .font(.custom(sansName, size: 11))
+                    .foregroundStyle(PaperTokens.inkDim)
+                    .padding(.leading, 32) // clears the weekday-glyph column above
             }
         }
+        .padding(.vertical, 13)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottom) { Rectangle().fill(PaperTokens.rule).frame(height: 1) }
+        .opacity(closed ? 0.55 : 1)
+        .onTapGesture { expandedDayID = expandedDayID == day.id ? nil : day.id }
+        .onLongPressGesture { handleLongPress(on: day.date) }
+    }
+
+    /// Tonight — the page's one "slip": slip background, seal-tint left border, and a
+    /// tint caption. README E2: "tonight is the only slip on the page."
+    private func tonightRow(_ day: PlanDay) -> some View {
+        let selected = selectedForSwap == day.date
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 14) {
+                Text(weekdayGlyph(for: day.date))
+                    .font(.custom(serifName, size: 15))
+                    .foregroundStyle(model.personaTint)
+                    .frame(width: 18, alignment: .leading)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(day.dish)
+                        .font(.custom(serifName, size: 15.5))
+                        .foregroundStyle(PaperTokens.ink)
+                    Text(tonightCaption(day))
+                        .font(.custom(sansName, size: 10))
+                        .tracking(2) // .2em at 10pt
+                        .foregroundStyle(model.personaTint)
+                }
+                Spacer(minLength: 8)
+                if selected {
+                    Text("已選取")
+                        .font(.custom(sansName, size: 10.5))
+                        .tracking(1.05) // .1em at 10.5pt
+                        .foregroundStyle(model.personaTint)
+                }
+            }
+            if expandedDayID == day.id, let reasoning = day.reasoning {
+                Text(reasoning)
+                    .font(.custom(sansName, size: 11))
+                    .foregroundStyle(PaperTokens.inkDim)
+                    .padding(.leading, 32)
+            }
+        }
+        .padding(.vertical, 15)
+        .padding(.horizontal, 16)
+        .background(PaperTokens.slip)
+        .overlay(alignment: .leading) {
+            Rectangle().fill(model.personaTint).frame(width: 2)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { expandedDayID = expandedDayID == day.id ? nil : day.id }
+        .onLongPressGesture { handleLongPress(on: day.date) }
+    }
+
+    /// "對調中…" — a pending swap, shown with a tint-colored spinner in place of the
+    /// dish (README E2 caption: "the pending swap shimmers"). No tap/long-press: a day
+    /// mid-swap isn't a valid target for another gesture.
+    private func pendingSwapRow(_ day: PlanDay) -> some View {
+        HStack(spacing: 14) {
+            Text(weekdayGlyph(for: day.date))
+                .font(.custom(serifName, size: 15))
+                .foregroundStyle(PaperTokens.inkDim)
+                .frame(width: 18, alignment: .leading)
+            ProgressView()
+                .tint(model.personaTint)
+                .controlSize(.mini)
+            Text("對調中…")
+                .font(.custom(sansName, size: 12.5).weight(.light))
+                .foregroundStyle(PaperTokens.inkDim)
+            Spacer(minLength: 8)
+        }
+        .padding(.vertical, 13)
+        .overlay(alignment: .bottom) { Rectangle().fill(PaperTokens.rule).frame(height: 1) }
+    }
+
+    /// Trailing caption for a `standardRow`, in priority order: an in-progress swap
+    /// selection (已選取, tint) beats a closed day's status (已煮/skip, `inkDim`) beats
+    /// a real prep note, so the most decision-relevant fact always wins the one slot.
+    /// No generic `day.mode` chip: the mock never renders the raw mode enum as a
+    /// label (`fast`/`batch`/…), and there's no Chinese label for it anywhere else in
+    /// the app to borrow — showing it here would be new, ungrounded vocabulary.
+    private func rowCaption(_ day: PlanDay) -> (text: String, color: Color)? {
+        if selectedForSwap == day.date {
+            return ("已選取", model.personaTint)
+        }
+        if day.status == "cooked" || day.status == "skipped" {
+            return (statusLabel(day.status), PaperTokens.inkDim)
+        }
+        if let prep = day.prepNote, !prep.isEmpty {
+            return (prep, PaperTokens.inkDim)
+        }
+        return nil
+    }
+
+    private func tonightCaption(_ day: PlanDay) -> String {
+        if let prep = day.prepNote, !prep.isEmpty { return "今晚 · \(prep)" }
+        return "今晚"
+    }
+
+    private static let weekdayGlyphs = ["日", "一", "二", "三", "四", "五", "六"] // Calendar weekday: Sun=1...Sat=7
+
+    /// Maps a `PlanDay.date` ("YYYY-MM-DD") to its Chinese weekday glyph, in household
+    /// time — mirrors `weekMonday`'s Sun=1...Sat=7 convention (WeekBoardLogic.swift) so
+    /// Monday always reads 一 regardless of device locale.
+    private func weekdayGlyph(for dateStr: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = householdTimezone
+        guard let date = formatter.date(from: dateStr) else { return "" }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = householdTimezone
+        let weekday = calendar.component(.weekday, from: date)
+        return Self.weekdayGlyphs[weekday - 1]
     }
 
     private func handleLongPress(on date: String) {
@@ -168,13 +405,6 @@ struct WeekBoardView: View {
         pendingSwapDates.insert(date)
         selectedForSwap = nil
         Task { await model.requestSwap(dateA: selected, dateB: date) }
-    }
-
-    private func pendingRow(text: String) -> some View {
-        HStack {
-            ProgressView()
-            Text(text).foregroundStyle(.secondary)
-        }
     }
 
     private func statusLabel(_ status: String) -> String {
