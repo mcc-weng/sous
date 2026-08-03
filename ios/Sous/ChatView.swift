@@ -20,6 +20,13 @@ struct ChatView: View {
     @State private var draft = ""
     @FocusState private var isDraftFocused: Bool
     @State private var pendingFocusScroll: Task<Void, Never>?
+    /// When the current wait-for-reply began — drives `RitualWaitingCard`'s stage
+    /// rotation (B2). Reset whenever a new user message becomes the last message (see
+    /// the `.onChange(of: model.messages.count)` below); if the view first appears
+    /// mid-wait (e.g. reopened while a reply is still pending), this starts from "now"
+    /// rather than the true wait start — a reasonable degradation, and no worse than
+    /// the flat "…" this replaced, which had no progress signal at all.
+    @State private var thinkingWaitStartedAt = Date()
 
     private var serifName: String { serifFontName(bundled: FontBook.isSerifBundled) }
     private var sansName: String { sansFontName(bundled: FontBook.isSansBundled) }
@@ -42,12 +49,18 @@ struct ChatView: View {
                     LazyVStack(spacing: 18) { // thread gap (mock: `gap:18px`)
                         ForEach(model.messages) { bubble($0) }
                         if model.messages.last?.sender == "user" {
-                            HStack(spacing: 8) {
-                                ProgressView().tint(model.personaTint)
-                                Text("…")
-                                    .font(.custom(serifName, size: 14.5))
-                                    .foregroundStyle(PaperTokens.inkFaint)
-                            }
+                            // B2 · 對話版 · 等待 — see RitualWaitingCard (WeekBoardView.swift)
+                            // for the design reference. Fires on every brain turn, not just
+                            // ritual ones: nothing in the current chat pipeline distinguishes
+                            // a ritual turn from an ordinary chat turn at this point, and both
+                            // are the same cloud round trip, so the same rotating-stage
+                            // treatment applies uniformly.
+                            RitualWaitingCard(
+                                stages: model.thinkingStages,
+                                leaveOkText: model.personaCopy["wait_leave_ok"] ?? "你可以先去忙 —— 排好我會放進便條通知你。",
+                                tint: model.personaTint,
+                                startedAt: thinkingWaitStartedAt
+                            )
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, Spacing.pageMargin)
                         }
@@ -58,6 +71,9 @@ struct ChatView: View {
                 .onChange(of: model.messages.count) {
                     pendingFocusScroll?.cancel()
                     scrollToBottom(proxy)
+                    if model.messages.last?.sender == "user" {
+                        thinkingWaitStartedAt = Date()
+                    }
                 }
                 .onChange(of: isDraftFocused) { _, isFocused in
                     guard isFocused else { return }

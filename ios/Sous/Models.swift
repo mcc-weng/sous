@@ -1,4 +1,5 @@
 import Foundation
+import Supabase
 
 struct ChatMessage: Codable, Identifiable, Equatable {
     let id: UUID
@@ -156,8 +157,16 @@ struct PreferencesRow: Codable {
     let content: String
 }
 
-struct PersonaCopyRow: Codable {
+struct PersonaCopyRow: Decodable {
+    /// The string-valued keys of `copy_pack` — nearly all of it. Non-string values
+    /// (currently just `thinking_stages`, a JSON array) are decoded separately below
+    /// and simply absent here, rather than failing the whole dictionary's decode — see
+    /// the custom `init(from:)` below for why that distinction is load-bearing.
     let copyPack: [String: String]
+    /// `thinking_stages` copy_pack key (migration 0016) — the one copy_pack value
+    /// that's a JSON array instead of a string (`README` B2 waiting-state rotation).
+    /// Empty if the key is missing or isn't actually an array of strings.
+    let thinkingStages: [String]
     /// Hex string (e.g. `"#9B2C1E"`) from `personas.tint` — the persona's accent
     /// colour, read at runtime rather than hardcoded, so a future second persona is a
     /// data change, not a code change. Optional/nullable: `AppModel` falls back to
@@ -167,5 +176,23 @@ struct PersonaCopyRow: Codable {
     enum CodingKeys: String, CodingKey {
         case copyPack = "copy_pack"
         case tint
+    }
+
+    /// `copy_pack` is `jsonb`; every key was string-valued until migration 0016 added
+    /// `thinking_stages` as a JSON array. Decoding straight into `[String: String]`
+    /// throws `DecodingError.typeMismatch` the instant any key holds a non-string
+    /// value — and because Codable dictionary decode is all-or-nothing, that failure
+    /// takes out the ENTIRE `copy_pack` dictionary, not just the offending key. That
+    /// bug shipped unnoticed (see `PersonaCopyRowDecodingTests`) because every call
+    /// site's hardcoded fallback happens to equal the seeded copy_pack value. Decoding
+    /// via `AnyJSON` (from the Supabase SDK, already a transitive dependency) instead
+    /// means one odd-typed value — today's array, tomorrow's bool or number — is
+    /// dropped rather than fatal to every other key.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let raw = try container.decode([String: AnyJSON].self, forKey: .copyPack)
+        copyPack = raw.compactMapValues(\.stringValue)
+        thinkingStages = raw["thinking_stages"]?.arrayValue?.compactMap(\.stringValue) ?? []
+        tint = try container.decodeIfPresent(String.self, forKey: .tint)
     }
 }

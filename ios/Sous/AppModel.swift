@@ -25,6 +25,13 @@ final class AppModel: ObservableObject {
     /// in a view. Starts at `PaperTokens.sealFallback` until `loadPersonaCopy()`
     /// resolves the real value (or falls back if it's missing/malformed).
     @Published var personaTint: Color = PaperTokens.sealFallback
+    /// `thinking_stages` copy_pack key (migration 0016) — the rotating stage words the
+    /// B2 waiting card (`RitualWaitingCard`, WeekBoardView.swift) cycles through while
+    /// a ritual/chat job is in flight. Starts empty (not a hardcoded persona phrase —
+    /// that would violate the zero-hardcoded-persona-strings rule) until
+    /// `loadPersonaCopy()` resolves the real value; `RitualWaitingCard.safeStages`
+    /// supplies a neutral, non-persona placeholder for that brief window.
+    @Published var thinkingStages: [String] = []
     @Published var onboardingRestartRequested = false
 
     init() {
@@ -170,6 +177,7 @@ final class AppModel: ObservableObject {
             let row: PersonaCopyRow = try await client.from("personas")
                 .select("copy_pack, tint").eq("id", value: personaId).single().execute().value
             personaCopy = row.copyPack
+            thinkingStages = row.thinkingStages
             // Dynamic persona tint: parsed from the DB column, not baked in at
             // compile time, so a future second persona is a data change. Falls back
             // if `tint` is null or fails to parse (not a valid #RRGGBB hex string).

@@ -38,6 +38,43 @@ final class WeekBoardLogicTests: XCTestCase {
                           prepNote: nil, reasoning: nil, status: "planned")
         XCTAssertEqual(nextWeekDisplayState(week: week, days: [day]), .days([day]))
     }
+
+    // MARK: thinkingStageIndex (B2 waiting-card rotation, Task 7)
+
+    func testThinkingStageIndexStartsAtFirstStage() {
+        XCTAssertEqual(thinkingStageIndex(elapsed: 0, stageCount: 3), 0)
+    }
+
+    func testThinkingStageIndexAdvancesAtMidIntervalPoints() {
+        // Default interval is 2.6s: 1.0s is still stage 0, 3.0s has crossed into stage
+        // 1, 6.0s has crossed into stage 2.
+        XCTAssertEqual(thinkingStageIndex(elapsed: 1.0, stageCount: 3), 0)
+        XCTAssertEqual(thinkingStageIndex(elapsed: 3.0, stageCount: 3), 1)
+        XCTAssertEqual(thinkingStageIndex(elapsed: 6.0, stageCount: 3), 2)
+    }
+
+    func testThinkingStageIndexClampsAtLastStageOnLongWait() {
+        // Real ritual turns take 100-150s — this is the expected steady state, not an
+        // edge case: the index must hold on the last stage, not overflow or wrap.
+        XCTAssertEqual(thinkingStageIndex(elapsed: 130, stageCount: 3), 2)
+    }
+
+    func testThinkingStageIndexHandlesSingleStage() {
+        XCTAssertEqual(thinkingStageIndex(elapsed: 50, stageCount: 1), 0)
+    }
+
+    func testThinkingStageIndexHandlesZeroStagesWithoutCrashing() {
+        XCTAssertEqual(thinkingStageIndex(elapsed: 10, stageCount: 0), 0)
+    }
+
+    func testThinkingStageIndexHandlesNegativeElapsed() {
+        XCTAssertEqual(thinkingStageIndex(elapsed: -5, stageCount: 3), 0)
+    }
+
+    func testThinkingStageIndexRespectsCustomInterval() {
+        XCTAssertEqual(thinkingStageIndex(elapsed: 4, stageCount: 3, interval: 5), 0)
+        XCTAssertEqual(thinkingStageIndex(elapsed: 6, stageCount: 3, interval: 5), 1)
+    }
 }
 
 private func makeDate(_ year: Int, _ month: Int, _ day: Int, timezone: TimeZone) -> Date {

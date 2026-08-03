@@ -43,3 +43,17 @@ func nextWeekDisplayState(week: PlanWeek?, days: [PlanDay]) -> NextWeekDisplaySt
         return .startRitual
     }
 }
+
+/// Which stage index to display `elapsed` seconds into a wait, given `stageCount`
+/// stages that rotate every `interval` seconds (README B2: ~2.6s, `thinking_stages`
+/// copy_pack key). Clamps to the last index once elapsed exceeds the full rotation — a
+/// turn that runs long holds on the final stage word instead of wrapping back to the
+/// first, which would look like the chef restarted from scratch. Real cloud ritual
+/// turns take 100-150s, so this is expected to clamp on every normal-length wait, not
+/// just an edge case. Shared by the ritual-bootstrap wait (WeekBoardView) and the
+/// in-chat wait (ChatView) — the same cloud round trip either way.
+func thinkingStageIndex(elapsed: TimeInterval, stageCount: Int, interval: TimeInterval = 2.6) -> Int {
+    guard stageCount > 0, elapsed > 0, interval > 0 else { return 0 }
+    let index = Int(elapsed / interval)
+    return min(index, stageCount - 1)
+}
