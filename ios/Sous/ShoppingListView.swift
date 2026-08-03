@@ -28,8 +28,10 @@ struct ShoppingListView: View {
     private static let chineseSectionNames: [String: String] = [
         "produce": "蔬果",
         "meat": "肉·海鮮",
+        "meat & seafood": "肉·海鮮",
         "seafood": "肉·海鮮",
         "dairy": "冷藏",
+        "dairy & fridge": "冷藏",
         "fridge": "冷藏",
         "pantry": "乾貨",
         "breakfast": "早餐",
