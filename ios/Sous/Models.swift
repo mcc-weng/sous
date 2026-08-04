@@ -95,6 +95,14 @@ func chefIsPresent(workerSeenAt: Date?, now: Date = Date(),
 struct Ingredient: Codable, Equatable, Hashable {
     let name: String
     let qty: String?
+    let qtyValue: Double?
+    let qtyUnit: String?
+
+    enum CodingKeys: String, CodingKey {
+        case name, qty
+        case qtyValue = "qty_value"
+        case qtyUnit = "qty_unit"
+    }
 }
 
 struct RecipeStep: Codable, Equatable, Hashable {
@@ -118,9 +126,10 @@ struct Recipe: Codable, Identifiable, Equatable, Hashable {
     let ingredients: [Ingredient]
     let steps: [RecipeStep]
     let createdAt: Date
+    let servings: Int
 
     enum CodingKeys: String, CodingKey {
-        case id, slug, title, ingredients, steps
+        case id, slug, title, ingredients, steps, servings
         case sourceBlock = "source_block"
         case bodyMd = "body_md"
         case createdAt = "created_at"

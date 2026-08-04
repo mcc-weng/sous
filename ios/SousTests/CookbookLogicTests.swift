@@ -4,7 +4,7 @@ import XCTest
 final class CookbookLogicTests: XCTestCase {
     private func makeRecipe(_ title: String) -> Recipe {
         Recipe(id: UUID(), slug: title, title: title, sourceBlock: nil, bodyMd: "",
-               ingredients: [], steps: [], createdAt: Date())
+               ingredients: [], steps: [], createdAt: Date(), servings: 2)
     }
 
     func testFilteredRecipesReturnsAllWhenQueryEmpty() {
