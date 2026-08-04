@@ -235,7 +235,8 @@ def _slugify(text: str) -> str:
 
 
 def save_recipe(conn, household_id: str, title: str, ingredients: list, steps: list,
-                source_block: str, body_md: str = "", slug: str | None = None) -> dict:
+                source_block: str, body_md: str = "", slug: str | None = None,
+                servings: int = 2) -> dict:
     if not ingredients:
         raise ValueError("ingredients must be a non-empty list")
     for ing in ingredients:
@@ -246,20 +247,22 @@ def save_recipe(conn, household_id: str, title: str, ingredients: list, steps: l
     for st in steps:
         if "text" not in st:
             raise ValueError('each step needs "text"')
+    if servings < 1:
+        raise ValueError("servings must be at least 1")
     resolved_slug = _slugify(slug or title)
     if not resolved_slug:
         raise ValueError("empty slug after deriving from title — pass an explicit "
                          "--slug for non-Latin titles")
     row = conn.execute(
         "insert into recipes (household_id, slug, title, source_block, body_md, "
-        "ingredients, steps) values (%s, %s, %s, %s, %s, %s, %s) "
+        "ingredients, steps, servings) values (%s, %s, %s, %s, %s, %s, %s, %s) "
         "on conflict (household_id, slug) do update set "
         "title = excluded.title, source_block = excluded.source_block, "
         "body_md = excluded.body_md, ingredients = excluded.ingredients, "
-        "steps = excluded.steps "
+        "steps = excluded.steps, servings = excluded.servings "
         "returning id::text, (xmax = 0) as inserted",
         (household_id, resolved_slug, title, source_block, body_md,
-         Jsonb(ingredients), Jsonb(steps)),
+         Jsonb(ingredients), Jsonb(steps), servings),
     ).fetchone()
     return {"ok": True, "id": row[0], "slug": resolved_slug, "created": row[1]}
 
@@ -378,6 +381,8 @@ def _parser() -> argparse.ArgumentParser:
                     help='JSON array: [{"name","qty"?}, ...]')
     sr.add_argument("--steps", required=True,
                     help='JSON array: [{"text","duration_sec"?,"tip"?}, ...]')
+    sr.add_argument("--servings", type=int, default=2,
+                    help="base serving count this recipe's quantities assume (default 2)")
     n = sub.add_parser("schedule-notification")
     n.add_argument("--kind", required=True, choices=sorted(_NOTIF_KINDS))
     n.add_argument("--title", required=True)
@@ -427,7 +432,8 @@ def _dispatch(conn, household_id: str, args) -> dict:
         except json.JSONDecodeError as exc:
             raise ValueError(f"invalid JSON in --ingredients or --steps: {exc}") from None
         return save_recipe(conn, household_id, args.title, ingredients, steps,
-                           args.source_block, body_md=args.body_md, slug=args.slug)
+                           args.source_block, body_md=args.body_md, slug=args.slug,
+                           servings=args.servings)
     if args.verb == "schedule-notification":
         return schedule_notification(conn, household_id, args.kind, args.title, args.body,
                                      date=args.date, source_id=args.source_id,

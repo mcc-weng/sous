@@ -484,6 +484,41 @@ def test_save_recipe_inserts_new(conn, api_hid):
     assert row[4] == steps
 
 
+def test_save_recipe_defaults_servings_to_two(conn, api_hid):
+    state_api.save_recipe(
+        conn, api_hid, title="蒜炒飯", slug="garlic-rice",
+        ingredients=[{"name": "rice", "qty": "2 cups"}],
+        steps=[{"text": "fry it"}], source_block="orig",
+    )
+    row = conn.execute(
+        "select servings from recipes where household_id = %s and slug = %s",
+        (api_hid, "garlic-rice"),
+    ).fetchone()
+    assert row[0] == 2
+
+
+def test_save_recipe_stores_explicit_servings(conn, api_hid):
+    state_api.save_recipe(
+        conn, api_hid, title="紅燒獅子頭", slug="lion-head",
+        ingredients=[{"name": "pork", "qty": "500g"}],
+        steps=[{"text": "simmer it"}], source_block="orig", servings=4,
+    )
+    row = conn.execute(
+        "select servings from recipes where household_id = %s and slug = %s",
+        (api_hid, "lion-head"),
+    ).fetchone()
+    assert row[0] == 4
+
+
+def test_save_recipe_rejects_invalid_servings(conn, api_hid):
+    with pytest.raises(ValueError, match="servings"):
+        state_api.save_recipe(
+            conn, api_hid, title="x", slug="x",
+            ingredients=[{"name": "a"}], steps=[{"text": "a"}],
+            source_block="s", servings=0,
+        )
+
+
 def test_save_recipe_upserts_on_slug_conflict(conn, api_hid):
     first = state_api.save_recipe(
         conn, api_hid, title="三杯雞", slug="three-cup-chicken",
@@ -553,6 +588,25 @@ def test_cli_save_recipe(api_hid):
     assert proc.returncode == 0, proc.stderr
     out = json.loads(proc.stdout)
     assert out["ok"] is True and out["slug"] == "three-cup-chicken"
+
+
+def test_cli_save_recipe_passes_servings(conn, api_hid):
+    ingredients_json = json.dumps([{"name": "rice", "qty": "2 cups"}])
+    steps_json = json.dumps([{"text": "fry it"}])
+    proc = _run_cli(
+        ["save-recipe", "--title", "蒜炒飯", "--slug", "garlic-rice-2",
+         "--source-block", "orig", "--ingredients", ingredients_json,
+         "--steps", steps_json, "--servings", "6"],
+        api_hid,
+    )
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    assert out["ok"] is True
+    row = conn.execute(
+        "select servings from recipes where household_id = %s and slug = %s",
+        (api_hid, "garlic-rice-2"),
+    ).fetchone()
+    assert row[0] == 6
 
 
 def test_schedule_notification_morning_nudge_uses_fixed_time(conn, api_hid):
