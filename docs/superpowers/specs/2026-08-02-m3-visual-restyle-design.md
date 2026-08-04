@@ -143,11 +143,21 @@ an oversight — flagging it here so it isn't silently lost the way presence alm
 Reuse the handoff README's "Repo mapping" table verbatim — it's already correct for
 Pass 1's scope (the swipe/explore rows point at the Pass 2 spec, not new Pass-1 files).
 
-## 8. Verification / exit criteria
+## 8. Verification / exit criteria — ALL PASSED, Pass 1a fully closed (2026-08-04)
 
 Same bar as every prior milestone: unit tests green, a real whole-branch review, and a
 real-device exit check on Mike's iPhone 13 mini specifically (not just simulator) given
 the 402pt→375pt adaptation risk in §6.
+
+- Unit tests: 76/76 passing on `main` post-merge.
+- Whole-branch review (opus): Ready to merge = Yes, no Critical/Important findings.
+- Real-device exit check: built, installed, and launched directly on Mike's iPhone 13
+  mini via `xcrun devicectl` (paired device, found via `xcrun devicectl list devices`).
+  Confirmed clean at the real 375pt width, all 8 restyled screens walked through
+  (Kitchen Counter, Chat, Week Board + ritual waiting/lock, Shopping List, Cookbook,
+  Onboarding, Notification Settings) — no fit/regression issues found. Font still
+  renders via the Songti TC system fallback (real Noto TC files remain an outstanding
+  manual prerequisite from Mike) — expected, not a defect.
 
 ## 8b. Backlog items surfaced during Pass 1a implementation — both resolved 2026-08-04
 
