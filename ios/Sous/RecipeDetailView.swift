@@ -4,10 +4,12 @@ import SwiftUI
 /// D1 · 食譜 (recipe — where 邊欄 lives) — Reference: design_handoff_sous_m3/README.md
 /// "D1 · 食譜 (recipe — where 邊欄 lives)" and `Sous App v2.dc.html` lines 481-558,
 /// **excluding** the 邊欄 exchange block (533-541 — `ChatMessage` has no `recipe_id`,
-/// wiring it up is Pass 2 territory) and the photo carousel / icon row (Task 10, not
-/// built here — the photo slot is still a static placeholder). The 份量 servings
-/// stepper + unit toggle (Task 9) are wired: ingredient quantities are rescaled live via
-/// `displayQuantity(...)` (`RecipeScalingLogic.swift`, Task 5).
+/// wiring it up is Pass 2 territory). The 份量 servings stepper + unit toggle (Task 9)
+/// are wired: ingredient quantities are rescaled live via `displayQuantity(...)`
+/// (`RecipeScalingLogic.swift`, Task 5). The photo slot uses `RecipePhotoCarousel`
+/// (Task 7, tap-to-advance placeholder photos), and a 拷貝/列印 icon row (Task 10, new —
+/// not in the mockup) copies/shares the current-serving ingredient list + steps as
+/// plain text via `UIPasteboard`/`ShareLink`.
 ///
 /// Scope note — running head left slot: the mock's left slot shows a fabricated
 /// ingredient-based category (`家常 · 雞`) that doesn't exist anywhere in `Recipe`'s
@@ -37,6 +39,7 @@ struct RecipeDetailView: View {
     @State private var showCookMode = false
     @State private var currentServings: Int
     @State private var unitSystem: UnitSystem = .metric
+    @State private var showCopyToast = false
 
     init(recipe: Recipe) {
         self.recipe = recipe
@@ -65,7 +68,9 @@ struct RecipeDetailView: View {
             VStack(alignment: .leading, spacing: 0) {
                 header
                 sealAndTitle
-                photoPlaceholder
+                iconRow
+                RecipePhotoCarousel(accentColor: model.personaTint)
+                    .padding(.top, 24)
                 servingsBand
                 ingredientsSection
                 stepsSection
@@ -89,6 +94,20 @@ struct RecipeDetailView: View {
         .task { await loadVerdicts() }
         .fullScreenCover(isPresented: $showCookMode) {
             CookModeView(recipe: recipe, planDay: nil).environmentObject(model)
+        }
+        .overlay(alignment: .top) {
+            if showCopyToast {
+                Text("已拷貝")
+                    .font(.custom(sansName, size: 11))
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(PaperTokens.ink)
+                    .foregroundStyle(PaperTokens.stock)
+                    .padding(.top, 8)
+                    .task {
+                        try? await Task.sleep(for: .seconds(1.5))
+                        showCopyToast = false
+                    }
+            }
         }
     }
 
@@ -146,22 +165,53 @@ struct RecipeDetailView: View {
         .padding(.top, 26)
     }
 
-    // MARK: Photo — Task 10 replaces this with `RecipePhotoCarousel`
+    // MARK: 拷貝 / 列印 icon row
 
-    /// Static placeholder, not the real carousel — same precedent as
-    /// `CounterView.photoPlate`: a flat tint plate + label instead of hand-rolling the
-    /// mock's diagonal-hatch gradient for a slot this task doesn't wire real data into.
-    private var photoPlaceholder: some View {
-        Rectangle()
-            .fill(PaperTokens.ink.opacity(0.06))
-            .frame(height: 194)
-            .overlay(
-                Text("料理照片")
-                    .font(.system(size: 10, design: .monospaced))
-                    .tracking(1.6) // .16em at 10pt
-                    .foregroundStyle(PaperTokens.inkFaint)
-            )
-            .padding(.top, 24)
+    /// New, not in the mockup (design spec) — top-trailing of the title/description
+    /// block, above the photo carousel, so it doesn't collide with any mocked element.
+    /// Copies/shares the current-serving ingredient list + steps as plain text.
+    private var iconRow: some View {
+        HStack(spacing: 18) {
+            Spacer()
+            Button {
+                UIPasteboard.general.string = formattedRecipeText()
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.success)
+                showCopyToast = true
+            } label: {
+                Label("拷貝", systemImage: "doc.on.doc")
+                    .font(.custom(sansName, size: 11))
+                    .foregroundStyle(PaperTokens.inkDim)
+            }
+            .frame(minHeight: 44)
+            ShareLink(item: formattedRecipeText()) {
+                Label("列印", systemImage: "printer")
+                    .font(.custom(sansName, size: 11))
+                    .foregroundStyle(PaperTokens.inkDim)
+            }
+            .frame(minHeight: 44)
+        }
+        .padding(.top, 20)
+    }
+
+    /// Plain-text rendering of the current-serving ingredient list + steps, shared by
+    /// both the 拷貝 (clipboard) and 列印 (`ShareLink`) actions — reuses
+    /// `displayQuantity(...)` (Task 5) so the copied/shared text always matches what's
+    /// on screen for the selected servings + unit system.
+    private func formattedRecipeText() -> String {
+        var lines = [recipe.title, ""]
+        lines.append("食材（\(currentServings) 人份）")
+        for ingredient in recipe.ingredients {
+            let qty = displayQuantity(ingredient: ingredient, currentServings: currentServings,
+                                      baseServings: recipe.servings, unitSystem: unitSystem)
+            lines.append(qty.isEmpty ? ingredient.name : "\(ingredient.name)　\(qty)")
+        }
+        lines.append("")
+        lines.append("作法")
+        for (i, step) in recipe.steps.enumerated() {
+            lines.append("\(i + 1). \(step.text)")
+        }
+        return lines.joined(separator: "\n")
     }
 
     // MARK: 份量 (servings stepper)
