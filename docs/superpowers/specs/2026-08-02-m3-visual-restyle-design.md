@@ -149,17 +149,17 @@ Same bar as every prior milestone: unit tests green, a real whole-branch review,
 real-device exit check on Mike's iPhone 13 mini specifically (not just simulator) given
 the 402pt→375pt adaptation risk in §6.
 
-## 8b. Backlog items surfaced during Pass 1a implementation (not built, not this pass)
+## 8b. Backlog items surfaced during Pass 1a implementation — both resolved 2026-08-04
 
-Two real gaps found by task reviews during implementation, both requiring more than a
-restyle to close properly — tracked here rather than silently dropped:
+Two real gaps found by task reviews during implementation. Both now have a decision from
+Mike, recorded here rather than left open:
 
 - **"已修改 →" changed-indicator row** (from 便條's slip design, README A3): when a chat
   reply actually changed plan/shopping state, the design shows a small link row on that
   slip. `ChatMessage` (`Models.swift`) has no field recording *that* a reply changed
   something or *what* — this needs new schema (the worker would have to report it) and
-  is backend-coupled the same way the grading flip and 邊欄 are. Belongs with Pass 2's
-  planning, not a Pass 1a fast-follow.
+  is backend-coupled the same way the grading flip and 邊欄 are. **Decision: goes to Pass
+  2 planning**, not a Pass 1a fast-follow.
 - **Kitchen Counter footer's 4th cell** (currently 通知 → `NotificationsSettingsView`)
   vs. the design's intent (便條, with an unread count). Investigated during Pass 1a: this
   isn't a one-line retarget — `ChatView` is embedded *inline* in `CounterView` already
@@ -167,7 +167,10 @@ restyle to close properly — tracked here rather than silently dropped:
   point the footer at without inventing a redundant modal duplicating what's already on
   screen. This is a real information-architecture question (does a 4th 便條 destination
   even make sense given chat is already always-visible?), not a mechanical fix — needs a
-  real decision, not a quick patch. Flag for Mike before anyone builds it.
+  real decision, not a quick patch. **Decision: keep the 4th cell as 通知
+  (`NotificationsSettingsView`).** The design's 便條 footer entry isn't adopted for this
+  app's actual IA — chat being always-visible inline already covers what that entry
+  would have provided.
 
 ## 9. Open items for Mike's review (don't silently proceed past these)
 
