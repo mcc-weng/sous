@@ -86,3 +86,12 @@ def test_recipe_intake_prompt_is_persona_neutral():
 def test_recipe_intake_prompt_keeps_all_placeholders():
     for ph in RECIPE_INTAKE_PLACEHOLDERS:
         assert ph in RECIPE_INTAKE_PROMPT
+
+
+def test_recipe_intake_prompt_documents_structured_quantities():
+    assert "qty_value" in RECIPE_INTAKE_PROMPT
+    assert "qty_unit" in RECIPE_INTAKE_PROMPT
+
+
+def test_recipe_intake_prompt_documents_servings_flag():
+    assert "--servings" in RECIPE_INTAKE_PROMPT
