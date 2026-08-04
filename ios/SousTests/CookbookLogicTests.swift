@@ -28,4 +28,16 @@ final class CookbookLogicTests: XCTestCase {
         let recipes = [makeRecipe("紅燒牛肉麵")]
         XCTAssertEqual(filteredRecipes(recipes, query: "咖哩"), [])
     }
+
+    func testFolioTextRendersDigitByDigit() {
+        XCTAssertEqual(folioText(23), "二三")
+    }
+
+    func testFolioTextRendersSingleDigit() {
+        XCTAssertEqual(folioText(5), "五")
+    }
+
+    func testFolioTextHandlesZeroAsLiteral() {
+        XCTAssertEqual(folioText(0), "0")
+    }
 }

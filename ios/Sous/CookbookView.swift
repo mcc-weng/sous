@@ -265,17 +265,4 @@ struct CookbookView: View {
         let count = cookCount(sessions: model.cookSessions, recipeId: recipe.id)
         return count > 0 ? "\(chineseNumeral(count))次" : "還沒煮"
     }
-
-    private static let folioDigits = ["〇", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
-
-    /// Folios read like page numbers — digit-by-digit ("二三" for 23) — not the
-    /// cardinal grammar `chineseNumeral` (CounterView.swift) uses for spoken counts
-    /// like dates or the header's "十四 道" ("fourteen dishes"). Matches the mock's own
-    /// folio style (二三/二七/三一/四二/四五) and keeps every folio a fixed
-    /// glyph-per-digit width, so it can't overflow the 24pt folio column the way a
-    /// 3-glyph cardinal reading ("二十三") could for any recipe count ≥ 20.
-    private func folioText(_ n: Int) -> String {
-        guard n > 0 else { return "\(n)" }
-        return String(n).compactMap { $0.wholeNumberValue.map { Self.folioDigits[$0] } }.joined()
-    }
 }
