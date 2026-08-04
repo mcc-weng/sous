@@ -4,9 +4,10 @@ import SwiftUI
 /// D1 · 食譜 (recipe — where 邊欄 lives) — Reference: design_handoff_sous_m3/README.md
 /// "D1 · 食譜 (recipe — where 邊欄 lives)" and `Sous App v2.dc.html` lines 481-558,
 /// **excluding** the 邊欄 exchange block (533-541 — `ChatMessage` has no `recipe_id`,
-/// wiring it up is Pass 2 territory) and the servings stepper / photo carousel / icon
-/// row (Tasks 9-10, not built here — ingredient quantities still read `ingredient.qty`
-/// unchanged, and the photo slot is a static placeholder).
+/// wiring it up is Pass 2 territory) and the photo carousel / icon row (Task 10, not
+/// built here — the photo slot is still a static placeholder). The 份量 servings
+/// stepper + unit toggle (Task 9) are wired: ingredient quantities are rescaled live via
+/// `displayQuantity(...)` (`RecipeScalingLogic.swift`, Task 5).
 ///
 /// Scope note — running head left slot: the mock's left slot shows a fabricated
 /// ingredient-based category (`家常 · 雞`) that doesn't exist anywhere in `Recipe`'s
@@ -34,6 +35,13 @@ struct RecipeDetailView: View {
     @EnvironmentObject private var model: AppModel
     @State private var verdicts: [Verdict] = []
     @State private var showCookMode = false
+    @State private var currentServings: Int
+    @State private var unitSystem: UnitSystem = .metric
+
+    init(recipe: Recipe) {
+        self.recipe = recipe
+        _currentServings = State(initialValue: recipe.servings)
+    }
 
     private var serifName: String { serifFontName(bundled: FontBook.isSerifBundled) }
     private var sansName: String { sansFontName(bundled: FontBook.isSansBundled) }
@@ -58,6 +66,7 @@ struct RecipeDetailView: View {
                 header
                 sealAndTitle
                 photoPlaceholder
+                servingsBand
                 ingredientsSection
                 stepsSection
                 if !verdicts.isEmpty {
@@ -155,11 +164,66 @@ struct RecipeDetailView: View {
             .padding(.top, 24)
     }
 
+    // MARK: 份量 (servings stepper)
+
+    /// Ruled band matching README D1's 份量 stepper shape — `−`/value/`+` with
+    /// seal-tint buttons. View-local only: `currentServings` never writes back to the
+    /// server, it just drives `displayQuantity(...)` below. Floors at 1 per the design
+    /// spec's rescale rules never producing a value below that.
+    private var servingsBand: some View {
+        HStack(alignment: .center) {
+            Text("份量")
+                .font(.custom(sansName, size: 10))
+                .tracking(3.2)
+                .foregroundStyle(PaperTokens.inkFaint)
+            Spacer()
+            Button {
+                if currentServings > 1 { currentServings -= 1 }
+            } label: {
+                Text("−").font(.system(size: 19)).foregroundStyle(model.personaTint)
+            }
+            .frame(minWidth: 44, minHeight: 44)
+            Text("\(currentServings) 人份")
+                .font(.custom(serifName, size: 16))
+                .monospacedDigit()
+                .frame(minWidth: 58)
+            Button {
+                currentServings += 1
+            } label: {
+                Text("+").font(.system(size: 19)).foregroundStyle(model.personaTint)
+            }
+            .frame(minWidth: 44, minHeight: 44)
+        }
+        .padding(.vertical, 14)
+        .overlay(Rectangle().stroke(PaperTokens.rule, lineWidth: 1).frame(height: 1), alignment: .top)
+        .overlay(Rectangle().stroke(PaperTokens.rule, lineWidth: 1).frame(height: 1), alignment: .bottom)
+    }
+
+    /// Small text toggle (公制/英制) — no mockup for this (design spec: designed
+    /// fresh). Kept visually distinct from the 份量 band so that band still matches the
+    /// mockup exactly; this sits beside the 食材 heading instead.
+    private var unitToggle: some View {
+        Button {
+            unitSystem = (unitSystem == .metric) ? .imperial : .metric
+        } label: {
+            Text(unitSystem == .metric ? "公制" : "英制")
+                .font(.custom(sansName, size: 10.5))
+                .tracking(1.5)
+                .foregroundStyle(PaperTokens.inkDim)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .overlay(Rectangle().stroke(PaperTokens.ink.opacity(0.24), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .frame(minHeight: 44)
+    }
+
     // MARK: 食材 (ingredients)
 
     private var ingredientsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             sectionLabel("食　材")
+                .overlay(alignment: .trailing) { unitToggle }
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(recipe.ingredients, id: \.name) { ingredient in
                     ingredientRow(ingredient)
@@ -170,16 +234,18 @@ struct RecipeDetailView: View {
         .padding(.top, 24)
     }
 
-    /// Name + dotted leader + `ingredient.qty` **unchanged** — Task 9 replaces the
-    /// trailing quantity text with the rescaled `displayQuantity(...)` call once the
-    /// servings stepper/unit-toggle state exists.
+    /// Name + dotted leader + rescaled/converted quantity — `displayQuantity(...)`
+    /// (Task 5) applies the current servings + unit-system state per ingredient,
+    /// falling back to the free-text `ingredient.qty` unchanged when there's no
+    /// structured quantity to work with.
     private func ingredientRow(_ ingredient: Ingredient) -> some View {
         HStack(alignment: .center, spacing: 10) {
             Text(ingredient.name)
                 .font(.custom(serifName, size: 14))
                 .foregroundStyle(PaperTokens.ink)
             dottedLeader
-            Text(ingredient.qty ?? "")
+            Text(displayQuantity(ingredient: ingredient, currentServings: currentServings,
+                                 baseServings: recipe.servings, unitSystem: unitSystem))
                 .font(.custom(serifName, size: 14))
                 .foregroundStyle(PaperTokens.inkDim)
                 .monospacedDigit()
