@@ -183,13 +183,13 @@ struct RecipeDetailView: View {
                     .font(.custom(sansName, size: 11))
                     .foregroundStyle(PaperTokens.inkDim)
             }
-            .frame(minHeight: 44)
+            .frame(minWidth: 44, minHeight: 44)
             ShareLink(item: formattedRecipeText()) {
                 Label("列印", systemImage: "printer")
                     .font(.custom(sansName, size: 11))
                     .foregroundStyle(PaperTokens.inkDim)
             }
-            .frame(minHeight: 44)
+            .frame(minWidth: 44, minHeight: 44)
         }
         .padding(.top, 20)
     }
@@ -265,7 +265,7 @@ struct RecipeDetailView: View {
                 .overlay(Rectangle().stroke(PaperTokens.ink.opacity(0.24), lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .frame(minHeight: 44)
+        .frame(minWidth: 44, minHeight: 44)
     }
 
     // MARK: 食材 (ingredients)

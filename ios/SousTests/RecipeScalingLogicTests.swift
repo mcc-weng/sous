@@ -67,4 +67,24 @@ final class RecipeScalingLogicTests: XCTestCase {
         let result = displayQuantity(ingredient: ing, currentServings: 2, baseServings: 2, unitSystem: .imperial)
         XCTAssertEqual(result, "10.6 oz")
     }
+
+    func testConvertRecognizesTraditionalChineseTablespoon() {
+        let result = convert(value: 2, unit: "大匙", to: .metric)
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result!.value, 30.0)
+        XCTAssertEqual(result!.unit, "ml")
+    }
+
+    func testConvertRecognizesTraditionalChineseCup() {
+        let result = convert(value: 1, unit: "杯", to: .metric)
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result!.value, 240.0)
+        XCTAssertEqual(result!.unit, "ml")
+    }
+
+    func testDisplayQuantityConvertsTraditionalChineseTablespoonEndToEnd() {
+        let ing = ingredient(qty: "2 大匙", qtyValue: 2, qtyUnit: "大匙")
+        let result = displayQuantity(ingredient: ing, currentServings: 2, baseServings: 2, unitSystem: .metric)
+        XCTAssertEqual(result, "30 ml")
+    }
 }

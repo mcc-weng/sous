@@ -19,7 +19,8 @@ func isDiscreteUnit(_ unit: String) -> Bool {
 /// between any two units of the same kind without an N×N conversion table.
 private let weightUnitsInGrams: [String: Double] = ["g": 1, "kg": 1000, "oz": 28.3495, "lb": 453.592]
 private let volumeUnitsInMl: [String: Double] = ["ml": 1, "l": 1000, "cup": 236.588,
-                                                  "tbsp": 14.7868, "tsp": 4.92892, "fl oz": 29.5735]
+                                                  "tbsp": 14.7868, "tsp": 4.92892, "fl oz": 29.5735,
+                                                  "大匙": 15, "小匙": 5, "杯": 240]
 
 /// Rescales a quantity from one servings baseline to another. Discrete units round to
 /// the nearest whole number (minimum 1) so scaling never invents a fake fraction like
