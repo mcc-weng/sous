@@ -170,6 +170,30 @@ Unit tests for `RecipeScalingLogic`:
 No changes needed to existing verdict-loading tests — that path is unchanged, only
 restyled.
 
+## Verification / exit criteria
+
+- Unit tests: 97/97 passing on `main` post-merge (94 from the plan's 10 tasks + 3 more
+  from a whole-branch-review fix — see below).
+- Whole-branch review (opus): Ready to merge = Yes (with fixes), no Critical/Important
+  findings. One real cross-task gap found and fixed: `recipe_intake.md`'s own worked
+  example emits Traditional Chinese volume units (`大匙`/`小匙`/`杯`) that
+  `RecipeScalingLogic.swift`'s conversion table didn't recognize, so the metric/imperial
+  toggle silently no-op'd for the most common TC volume units — fixed by adding them as
+  clean Asian-cooking-convention entries (15/5/240 ml), plus two Minor touch-target gaps
+  (`minWidth: 44` missing on two buttons), re-reviewed clean.
+- Real-device exit check (2026-08-05): built, installed, and launched directly on Mike's
+  iPhone 13 mini via `xcrun devicectl` (generic-iOS build, signed, then
+  `devicectl device install app` / `device process launch` — the specific-device
+  `xcodebuild` destination hit a transient "developer disk image could not be mounted"
+  error, worked around by building generically first). Confirms the app runs on real
+  hardware at the true 375pt width. **Not independently confirmed: the actual visual
+  appearance of the restyled Recipe Detail screen, servings stepper, unit toggle, photo
+  carousel, and icon row on-device** — no screenshot/screen-mirroring tool was available
+  in this environment to inspect the physical screen, so this exit check covers the
+  mechanical deploy path only, not the visual walkthrough Pass 1a's exit check had.
+  **Open: Mike to eyeball the Recipe Detail screen on-device** (open any recipe from
+  Cookbook) before treating Pass 1b as fully closed the way Pass 1a is.
+
 ## Out of scope (deferred, not forgotten)
 
 - Auto-found reference photos (web search sourcing) — own future spec.
