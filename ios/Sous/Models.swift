@@ -151,13 +151,20 @@ struct CookSession: Codable, Identifiable, Equatable {
     let recipeId: UUID
     let startedAt: Date
     let completedAt: Date?
+    let photoUrl: String?
 
-    enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case id
         case recipeId = "recipe_id"
         case startedAt = "started_at"
         case completedAt = "completed_at"
+        case photoUrl = "photo_url"
     }
+
+    /// PostgREST `select=` column list derived from `CodingKeys`, same pattern and same
+    /// rationale as `Recipe.selectColumns` — see that property's doc comment for the
+    /// production incident this class of bug caused.
+    static let selectColumns = CodingKeys.allCases.map(\.rawValue).joined(separator: ",")
 }
 
 struct Verdict: Codable, Identifiable, Equatable {

@@ -4,7 +4,7 @@ import XCTest
 final class CookHistoryLogicTests: XCTestCase {
     private func makeSession(recipeId: UUID, completed: Bool) -> CookSession {
         CookSession(id: UUID(), recipeId: recipeId, startedAt: Date(),
-                    completedAt: completed ? Date() : nil)
+                    completedAt: completed ? Date() : nil, photoUrl: nil)
     }
 
     func testCookCountMatchesOnlyGivenRecipe() {

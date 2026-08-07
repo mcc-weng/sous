@@ -162,7 +162,7 @@ struct CookModeView: View {
         do {
             let inserted: CookSession = try await model.client.from("cook_sessions")
                 .insert(NewSession(household_id: household.id, recipe_id: recipe.id))
-                .select("id,recipe_id,started_at,completed_at").single().execute().value
+                .select(CookSession.selectColumns).single().execute().value
             sessionId = inserted.id
         } catch { print("start cook session: \(error)") }
     }

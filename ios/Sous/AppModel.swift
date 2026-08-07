@@ -206,7 +206,7 @@ final class AppModel: ObservableObject {
                 .order("created_at", ascending: false)
                 .execute().value
             cookSessions = try await client.from("cook_sessions")
-                .select("id,recipe_id,started_at,completed_at")
+                .select(CookSession.selectColumns)
                 .execute().value
         } catch { print("cookbook load: \(error)") }
     }
