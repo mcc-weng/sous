@@ -189,10 +189,25 @@ restyled.
   hardware at the true 375pt width. **Not independently confirmed: the actual visual
   appearance of the restyled Recipe Detail screen, servings stepper, unit toggle, photo
   carousel, and icon row on-device** — no screenshot/screen-mirroring tool was available
-  in this environment to inspect the physical screen, so this exit check covers the
-  mechanical deploy path only, not the visual walkthrough Pass 1a's exit check had.
-  **Open: Mike to eyeball the Recipe Detail screen on-device** (open any recipe from
-  Cookbook) before treating Pass 1b as fully closed the way Pass 1a is.
+  in this environment to inspect the physical screen, so this initial exit check covered
+  the mechanical deploy path only, not the visual walkthrough Pass 1a's exit check had.
+- **Post-merge production bug, found and fixed same day (2026-08-05 → 2026-08-07):** the
+  real-device check surfaced that the live app showed zero recipes and no plan for
+  tonight. Two distinct causes, both fixed: (1) migrations `0016`–`0018` had only ever
+  been applied to the local dev stack, never pushed to the production Supabase project
+  the app actually talks to — fixed via `supabase db push --linked`; (2)
+  `AppModel.loadCookbook()`'s hand-maintained PostgREST `select=` column list was never
+  updated to include the new `servings` field, so every row failed to decode and the
+  existing `catch { print(...) }` swallowed it silently — fixed by deriving the select
+  list from `Recipe.CodingKeys.allCases` instead of a hand-maintained string, closing off
+  the whole bug class rather than just this instance. See
+  `[[feedback-real-device-check-needs-cloud-migrations]]` (project memory) for the full
+  incident writeup.
+- **Visual walkthrough confirmed by Mike on-device (2026-08-07):** Cookbook shows all 5
+  recipes with folio numerals; Recipe Detail renders the seal `第一道` numeral, title,
+  description, 拷貝/列印 icon row, the placeholder photo carousel with progress-segment
+  bars, the 份量 stepper at `2 人份`, the `公制` unit toggle, and ingredient rows — Pass
+  1b is now fully closed, matching Pass 1a's bar.
 
 ## Out of scope (deferred, not forgotten)
 
