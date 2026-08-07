@@ -202,7 +202,7 @@ final class AppModel: ObservableObject {
     func loadCookbook() async {
         do {
             recipes = try await client.from("recipes")
-                .select("id,slug,title,source_block,body_md,ingredients,steps,created_at")
+                .select(Recipe.selectColumns)
                 .order("created_at", ascending: false)
                 .execute().value
             cookSessions = try await client.from("cook_sessions")

@@ -128,12 +128,22 @@ struct Recipe: Codable, Identifiable, Equatable, Hashable {
     let createdAt: Date
     let servings: Int
 
-    enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case id, slug, title, ingredients, steps, servings
         case sourceBlock = "source_block"
         case bodyMd = "body_md"
         case createdAt = "created_at"
     }
+
+    /// PostgREST `select=` column list, derived from `CodingKeys` rather than
+    /// hand-maintained separately — a field added to `Recipe` without updating a
+    /// hardcoded select string silently drops that column from every fetch and, if the
+    /// field is non-optional, throws a decode error the `catch { print(...) }` in
+    /// `AppModel.loadCookbook()` swallows entirely (this exact bug shipped with Pass 1b's
+    /// `servings` field and produced an empty cookbook in production for two days before
+    /// being traced to this). Deriving the column list from `CodingKeys` makes that class
+    /// of bug impossible instead of merely fixing this one instance of it.
+    static let selectColumns = CodingKeys.allCases.map(\.rawValue).joined(separator: ",")
 }
 
 struct CookSession: Codable, Identifiable, Equatable {
