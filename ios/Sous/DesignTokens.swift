@@ -21,6 +21,29 @@ enum PaperTokens {
     static let leader = ink.opacity(0.30)
 }
 
+/// 灶 · Stage — the dark half of 書與灶, reserved for exactly three screens per the
+/// design handoff: cook-mode steps, timers, and 上菜 (`Sous App v2.dc.html` calls this
+/// "if your hands are busy and something is counting, dark; everything else is paper").
+/// Cook Mode (Pass 1c) is the first screen set to use this enum — Pass 1a only ever
+/// built `PaperTokens`.
+enum StageTokens {
+    static let bg = Color(red: 0x0C / 255, green: 0x0A / 255, blue: 0x09 / 255)
+    static let ink = Color(red: 0xF4 / 255, green: 0xEF / 255, blue: 0xE6 / 255)
+    static let inkDim = Color(red: 0xA4 / 255, green: 0x9D / 255, blue: 0x93 / 255)
+    static let brass = Color(red: 0xC9 / 255, green: 0x8A / 255, blue: 0x3E / 255)
+    static let brassSoft = Color(red: 0xDC / 255, green: 0xC5 / 255, blue: 0x9C / 255)
+    static let rule = ink.opacity(0.20)
+
+    /// Anchored to the bottom edge, arrives last in the crossing (500ms) — "light comes
+    /// on last, the way a gas ring does" (README §Motion).
+    static var glow: some View {
+        RadialGradient(
+            colors: [brass.opacity(0.20), .clear],
+            center: .center, startRadius: 0, endRadius: 160
+        )
+    }
+}
+
 enum Spacing {
     static let pageMargin: CGFloat = 34
     static let deckMargin: CGFloat = 27
