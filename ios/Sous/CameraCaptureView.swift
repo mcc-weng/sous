@@ -41,13 +41,24 @@ struct CameraCaptureView: UIViewControllerRepresentable {
 
 extension UIImage {
     /// Center-crops to a 1:1 square — the design's photo target is always square
-    /// regardless of what aspect ratio the camera/library hands back.
+    /// regardless of what aspect ratio the camera/library hands back. Normalizes
+    /// orientation first: `UIImage.size` is orientation-corrected, but the raw
+    /// `cgImage` backing store is not — cropping the raw buffer directly against
+    /// orientation-aware `size` produces a wrong-axis crop for any non-`.up`
+    /// orientation, which is most portrait camera captures (they come back `.right`).
     func croppedToSquare() -> UIImage {
-        let side = min(size.width, size.height)
-        let origin = CGPoint(x: (size.width - side) / 2, y: (size.height - side) / 2)
-        guard let cgImage,
+        let normalized = normalizedToUpOrientation()
+        let side = min(normalized.size.width, normalized.size.height)
+        let origin = CGPoint(x: (normalized.size.width - side) / 2, y: (normalized.size.height - side) / 2)
+        guard let cgImage = normalized.cgImage,
               let cropped = cgImage.cropping(to: CGRect(origin: origin, size: CGSize(width: side, height: side)))
-        else { return self }
-        return UIImage(cgImage: cropped, scale: scale, orientation: imageOrientation)
+        else { return normalized }
+        return UIImage(cgImage: cropped, scale: normalized.scale, orientation: .up)
+    }
+
+    private func normalizedToUpOrientation() -> UIImage {
+        guard imageOrientation != .up else { return self }
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { _ in draw(in: CGRect(origin: .zero, size: size)) }
     }
 }
