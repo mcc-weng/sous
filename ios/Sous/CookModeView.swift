@@ -1,6 +1,12 @@
 // ios/Sous/CookModeView.swift
 import SwiftUI
 
+/// C1-C4 · 備料/灶前/上菜/講評 — Reference: design_handoff_sous_m3/README.md §C1-C4 and
+/// docs/superpowers/specs/2026-08-07-m3-visual-restyle-pass1c-cook-mode-design.md.
+/// `.plateUp` (上菜, photo capture) is a new phase this pass adds — the pre-Pass-1c
+/// flow jumped straight from the last teleprompter step to the verdict, skipping photo
+/// capture entirely. C4 (講評) is restyled only, per the design spec: grading stays a
+/// direct user pick (神作/不錯/普通/翻車), no blind-reveal/brain-write — that's Pass 2.
 struct CookModeView: View {
     let recipe: Recipe
     let planDay: PlanDay?
@@ -14,8 +20,14 @@ struct CookModeView: View {
     @State private var sessionId: UUID?
     @State private var rating: String?
     @State private var note = ""
+    @State private var capturedPhotoData: Data?
+    @StateObject private var timerModel = CookTimerModel()
 
-    private enum Phase { case prep, cooking, verdict, done }
+    private enum Phase { case prep, cooking, plateUp, verdict, done }
+
+    /// Drives `CrossingTransition` — true for both dark phases (C2 teleprompter, C3
+    /// 上菜), false for the paper phases either side of them.
+    private var showingStage: Bool { phase == .cooking || phase == .plateUp }
 
     init(recipe: Recipe, planDay: PlanDay?) {
         self.recipe = recipe
@@ -23,45 +35,129 @@ struct CookModeView: View {
         _checked = State(initialValue: Array(repeating: false, count: recipe.ingredients.count))
     }
 
+    private var serifName: String { serifFontName(bundled: FontBook.isSerifBundled) }
+    private var sansName: String { sansFontName(bundled: FontBook.isSansBundled) }
+
     var body: some View {
-        VStack {
-            switch phase {
-            case .prep: prepChecklist
-            case .cooking: teleprompter
-            case .verdict: verdictPrompt
-            case .done: doneView
-            }
+        CrossingTransition(showingStage: showingStage) {
+            paperContent
+        } stage: {
+            stageContent
         }
-        .padding()
         .task { await startSession() }
     }
 
+    @ViewBuilder
+    private var paperContent: some View {
+        switch phase {
+        case .prep: prepChecklist
+        case .verdict: verdictPrompt
+        case .done: doneView
+        case .cooking, .plateUp: EmptyView() // unreachable — those phases render via stageContent
+        }
+    }
+
+    @ViewBuilder
+    private var stageContent: some View {
+        switch phase {
+        case .cooking: teleprompter
+        case .plateUp: plateUpCapture // Task 8 gives this real content
+        case .prep, .verdict, .done: EmptyView() // unreachable — those phases render via paperContent
+        }
+    }
+
+    private var plateUpCapture: some View {
+        Color(StageTokens.bg).ignoresSafeArea()
+    }
+
     private var prepChecklist: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("備料").font(.title2.bold())
-            ForEach(recipe.ingredients.indices, id: \.self) { i in
-                Button {
-                    checked[i].toggle()
-                } label: {
-                    HStack {
-                        Image(systemName: checked[i] ? "checkmark.circle.fill" : "circle")
-                        Text(recipe.ingredients[i].name)
-                        Spacer()
-                        if let qty = recipe.ingredients[i].qty {
-                            Text(qty).foregroundStyle(.secondary)
-                        }
-                    }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("備　料")
+                    .font(.custom(sansName, size: 10))
+                    .tracking(4.2)
+                    .foregroundStyle(PaperTokens.inkFaint)
+                    .padding(.top, Spacing.lg)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
+                ForEach(recipe.ingredients.indices, id: \.self) { i in
+                    checklistRow(index: i)
                 }
-                .buttonStyle(.plain)
+
+                Spacer(minLength: Spacing.lg)
+
+                Button {
+                    beginCooking()
+                } label: {
+                    Text("開始烹飪")
+                        .font(.custom(sansName, size: 13.5))
+                        .tracking(2.6)
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .foregroundStyle(PaperTokens.stock)
+                        .background(model.personaTint)
+                }
+                .disabled(!recipe.ingredients.isEmpty && !isChecklistComplete(checked))
+
+                Text("開始後,廚房會轉為烹飪模式 — 隨時可以回來這一頁。")
+                    .font(.system(size: 10.5))
+                    .tracking(1.1)
+                    .foregroundStyle(PaperTokens.inkDim)
+                    .padding(.top, Spacing.sm)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
             }
-            Spacer()
-            HStack {
-                Button("略過") { phase = .cooking }
-                Spacer()
-                Button("開始烹飪") { phase = .cooking }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!recipe.ingredients.isEmpty && !isChecklistComplete(checked))
+            .padding(.horizontal, Spacing.pageMargin)
+        }
+        .background(PaperTokens.stock)
+    }
+
+    private func checklistRow(index i: Int) -> some View {
+        Button {
+            checked[i].toggle()
+        } label: {
+            HStack(spacing: Spacing.md) {
+                checklistCheckbox(checked: checked[i])
+                Text(recipe.ingredients[i].name)
+                    .font(.custom(serifName, size: 16))
+                    .foregroundStyle(PaperTokens.ink)
+                Spacer(minLength: 0)
+                if let qty = recipe.ingredients[i].qty {
+                    Text(qty)
+                        .font(.custom(serifName, size: 14))
+                        .foregroundStyle(PaperTokens.inkDim)
+                        .monospacedDigit()
+                }
             }
+            .padding(.vertical, 15)
+            .frame(minHeight: 56)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .overlay(alignment: .bottom) { Rectangle().fill(PaperTokens.rule).frame(height: 1) }
+    }
+
+    private func checklistCheckbox(checked: Bool) -> some View {
+        ZStack {
+            if checked {
+                Rectangle().fill(model.personaTint)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(PaperTokens.stock)
+            } else {
+                Rectangle().stroke(PaperTokens.ruleStrong, lineWidth: 1)
+            }
+        }
+        .frame(width: 24, height: 24)
+    }
+
+    private func beginCooking() {
+        phase = .cooking
+        // Only steps with an explicit duration get a timer — matches the teleprompter's
+        // own conditional ring display (Task 7) and the original file's precedent of
+        // only showing a duration line `if let duration = ...`. A step with no duration
+        // starting a 0-second timer would fire an immediate, spurious "time's up".
+        if let duration = recipe.steps.first?.durationSec {
+            timerModel.setStepTimer(label: "步驟 \(chineseNumeral(1))", duration: TimeInterval(duration))
         }
     }
 
