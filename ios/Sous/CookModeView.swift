@@ -497,41 +497,81 @@ struct CookModeView: View {
     }
 
     private var verdictPrompt: some View {
-        VStack(spacing: 16) {
-            Text("這頓煮得怎麼樣?").font(.title2.bold())
-            ForEach(["神作", "不錯", "普通", "翻車"], id: \.self) { option in
-                if rating == option {
-                    Button(option) { rating = option }.buttonStyle(.borderedProminent)
-                } else {
-                    Button(option) { rating = option }.buttonStyle(.bordered)
+        ScrollView {
+            VStack(spacing: 20) {
+                Text("寫進書裡了").font(.custom(sansName, size: 10)).tracking(2.8)
+                    .foregroundStyle(model.personaTint)
+                Text("這頓煮得怎麼樣?")
+                    .font(.custom(serifName, size: 22))
+                    .foregroundStyle(PaperTokens.ink)
+
+                VStack(spacing: 10) {
+                    ForEach(["神作", "不錯", "普通", "翻車"], id: \.self) { option in
+                        Button {
+                            rating = option
+                        } label: {
+                            Text(option)
+                                .font(.custom(serifName, size: 16))
+                                .frame(maxWidth: .infinity, minHeight: 50)
+                                .foregroundStyle(rating == option ? PaperTokens.stock : PaperTokens.ink)
+                                .background(rating == option ? model.personaTint : Color.clear)
+                                .overlay(Rectangle().stroke(PaperTokens.ruleStrong, lineWidth: 1))
+                        }
+                    }
                 }
+
+                TextField("備註(選填)", text: $note)
+                    .font(.custom(sansName, size: 13))
+                    .padding(12)
+                    .overlay(Rectangle().stroke(PaperTokens.rule, lineWidth: 1))
+
+                Button("送出") { Task { await submitVerdict() } }
+                    .font(.custom(sansName, size: 13.5))
+                    .tracking(2.2)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .foregroundStyle(PaperTokens.stock)
+                    .background(rating == nil ? PaperTokens.inkDim.opacity(0.4) : model.personaTint)
+                    .disabled(rating == nil)
+
+                Button("略過") { phase = .done }
+                    .font(.custom(sansName, size: 12))
+                    .foregroundStyle(PaperTokens.inkDim)
+                    .frame(minHeight: 44)
             }
-            TextField("備註(選填)", text: $note)
-                .textFieldStyle(.roundedBorder)
-            Button("送出") { Task { await submitVerdict() } }
-                .buttonStyle(.borderedProminent)
-                .disabled(rating == nil)
-            Button("略過") { phase = .done }
+            .padding(.horizontal, Spacing.pageMargin)
+            .padding(.top, Spacing.lg)
         }
+        .background(PaperTokens.stock)
     }
 
     private var doneView: some View {
         let count = cookCount(sessions: model.cookSessions, recipeId: recipe.id)
         return VStack(spacing: 16) {
-            Label("煮好了!", systemImage: "checkmark.seal.fill")
-                .font(.title.bold())
-                .foregroundStyle(.green)
+            Spacer()
+            Text("煮好了")
+                .font(.custom(serifName, size: 26))
+                .foregroundStyle(model.personaTint)
             if isMilestone(count) {
                 Text(milestoneReactionText(count: count, template: model.personaCopy["cook_milestone_reaction"]))
-                    .font(.subheadline)
+                    .font(.custom(serifName, size: 14))
                     .multilineTextAlignment(.center)
+                    .foregroundStyle(PaperTokens.inkDim)
+                    .padding(.horizontal, Spacing.pageMargin)
             } else if count > 0 {
-                Text("已煮 \(count) 次")
-                    .font(.subheadline).foregroundStyle(.secondary)
+                Text("已煮 \(chineseNumeral(count)) 次")
+                    .font(.custom(sansName, size: 12.5))
+                    .foregroundStyle(PaperTokens.inkDim)
             }
+            Spacer()
             Button("關閉") { dismiss() }
-                .buttonStyle(.borderedProminent)
+                .font(.custom(sansName, size: 13.5))
+                .tracking(2.2)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .foregroundStyle(PaperTokens.stock)
+                .background(model.personaTint)
+                .padding(.horizontal, Spacing.pageMargin)
         }
+        .background(PaperTokens.stock)
     }
 
     private func durationLabel(_ seconds: Int) -> String {
