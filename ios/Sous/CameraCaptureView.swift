@@ -41,24 +41,26 @@ struct CameraCaptureView: UIViewControllerRepresentable {
 
 extension UIImage {
     /// Center-crops to a 1:1 square — the design's photo target is always square
-    /// regardless of what aspect ratio the camera/library hands back. Normalizes
-    /// orientation first: `UIImage.size` is orientation-corrected, but the raw
-    /// `cgImage` backing store is not — cropping the raw buffer directly against
-    /// orientation-aware `size` produces a wrong-axis crop for any non-`.up`
-    /// orientation, which is most portrait camera captures (they come back `.right`).
+    /// regardless of what aspect ratio the camera/library hands back. Works entirely
+    /// in UIKit's point-based coordinate space via `draw(at:)`, which is orientation-
+    /// and scale-aware by construction. This deliberately avoids a raw `CGImage`-level
+    /// crop: two prior attempts at that approach each introduced a silently-wrong,
+    /// non-crashing crop — first because `cgImage`'s pixel buffer isn't
+    /// orientation-corrected (a `.right`-oriented portrait photo has cgImage
+    /// width/height swapped relative to `size`), then because
+    /// `UIGraphicsImageRenderer`'s default format scale is the device's screen scale,
+    /// not the source image's, so a subsequent points-based crop rect was
+    /// misinterpreted as pixel coordinates on an oversized buffer. `draw(at:)` and a
+    /// pinned `format.scale` keep every coordinate in the same space throughout, so
+    /// there's no unit mismatch left to reintroduce.
     func croppedToSquare() -> UIImage {
-        let normalized = normalizedToUpOrientation()
-        let side = min(normalized.size.width, normalized.size.height)
-        let origin = CGPoint(x: (normalized.size.width - side) / 2, y: (normalized.size.height - side) / 2)
-        guard let cgImage = normalized.cgImage,
-              let cropped = cgImage.cropping(to: CGRect(origin: origin, size: CGSize(width: side, height: side)))
-        else { return normalized }
-        return UIImage(cgImage: cropped, scale: normalized.scale, orientation: .up)
-    }
-
-    private func normalizedToUpOrientation() -> UIImage {
-        guard imageOrientation != .up else { return self }
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { _ in draw(in: CGRect(origin: .zero, size: size)) }
+        let side = min(size.width, size.height)
+        let origin = CGPoint(x: (size.width - side) / 2, y: (size.height - side) / 2)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format)
+        return renderer.image { _ in
+            self.draw(at: CGPoint(x: -origin.x, y: -origin.y))
+        }
     }
 }
