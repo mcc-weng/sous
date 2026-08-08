@@ -98,6 +98,19 @@ struct CookModeView: View {
                 }
                 .disabled(!recipe.ingredients.isEmpty && !isChecklistComplete(checked))
 
+                // Bypasses the checklist entirely — an incomplete/unavailable pantry
+                // shouldn't block cooking. Calls beginCooking() (not a bare phase
+                // assignment) so the first step's timer still gets set up. No
+                // .disabled(...) — that's the whole point versus 開始烹飪 above.
+                Button {
+                    beginCooking()
+                } label: {
+                    Text("略過")
+                        .font(.custom(sansName, size: 12))
+                        .foregroundStyle(PaperTokens.inkDim)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+
                 Text("開始後,廚房會轉為烹飪模式 — 隨時可以回來這一頁。")
                     .font(.system(size: 10.5))
                     .tracking(1.1)
