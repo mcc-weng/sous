@@ -29,11 +29,18 @@ final class CrossingChoreography: ObservableObject {
 
     func crossToStage(reduceMotion: Bool, onSettled: (() -> Void)? = nil) {
         if reduceMotion {
-            withAnimation(.linear(duration: 0.14)) {
-                paperDimmed = true
-                stageOpacity = 1
-                glowOpacity = 1
-            }
+            // README §Accessibility: "Reduce Motion collapses everything to 140ms
+            // cross-fades, including the crossing (a straight cut, warning line still
+            // shown)" — the crossing specifically becomes a straight cut, not a fast
+            // fade (the 140ms figure describes other elements' treatment). Set final
+            // state directly, no `withAnimation` — wrapping an instant state change in
+            // `withAnimation` is misleading: SwiftUI can't animate a property change on
+            // a view in the very same transaction that inserts it (no prior rendered
+            // frame to interpolate from), so it would have rendered as an unannounced
+            // pop dressed up as an animation call.
+            paperDimmed = true
+            stageOpacity = 1
+            glowOpacity = 1
             stageVisible = true
             paperVisible = false
             onSettled?()
@@ -61,11 +68,10 @@ final class CrossingChoreography: ObservableObject {
 
     func crossToPaper(reduceMotion: Bool, onSettled: (() -> Void)? = nil) {
         if reduceMotion {
-            withAnimation(.linear(duration: 0.14)) {
-                paperDimmed = false
-                stageOpacity = 0
-                glowOpacity = 0
-            }
+            // Same straight-cut reasoning as crossToStage's reduceMotion branch.
+            paperDimmed = false
+            stageOpacity = 0
+            glowOpacity = 0
             paperVisible = true
             stageVisible = false
             onSettled?()
