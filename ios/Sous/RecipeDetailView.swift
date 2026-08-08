@@ -69,7 +69,11 @@ struct RecipeDetailView: View {
                 header
                 sealAndTitle
                 iconRow
-                RecipePhotoCarousel(accentColor: model.personaTint)
+                RecipePhotoCarousel(
+                    accentColor: model.personaTint,
+                    photoPaths: cookPhotoPaths(sessions: model.cookSessions, recipeId: recipe.id),
+                    loadImage: { path in await model.downloadPhoto(path: path) }
+                )
                     .padding(.top, 24)
                 servingsBand
                 ingredientsSection

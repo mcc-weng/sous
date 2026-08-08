@@ -56,4 +56,35 @@ final class CookHistoryLogicTests: XCTestCase {
         let result = milestoneReactionText(count: 3, template: nil)
         XCTAssertTrue(result.contains("3"))
     }
+
+    private func session(recipeId: UUID, photoUrl: String?, startedAt: Date) -> CookSession {
+        CookSession(id: UUID(), recipeId: recipeId, startedAt: startedAt,
+                   completedAt: startedAt, photoUrl: photoUrl)
+    }
+
+    func testCookPhotoPathsFiltersToRecipeAndPresence() {
+        let target = UUID()
+        let other = UUID()
+        let sessions = [
+            session(recipeId: target, photoUrl: "a.jpg", startedAt: Date()),
+            session(recipeId: target, photoUrl: nil, startedAt: Date()),
+            session(recipeId: other, photoUrl: "b.jpg", startedAt: Date()),
+        ]
+        XCTAssertEqual(cookPhotoPaths(sessions: sessions, recipeId: target), ["a.jpg"])
+    }
+
+    func testCookPhotoPathsOrdersMostRecentFirst() {
+        let recipeId = UUID()
+        let older = session(recipeId: recipeId, photoUrl: "older.jpg",
+                            startedAt: Date().addingTimeInterval(-3600))
+        let newer = session(recipeId: recipeId, photoUrl: "newer.jpg", startedAt: Date())
+        XCTAssertEqual(cookPhotoPaths(sessions: [older, newer], recipeId: recipeId),
+                      ["newer.jpg", "older.jpg"])
+    }
+
+    func testCookPhotoPathsEmptyWhenNoneCaptured() {
+        let recipeId = UUID()
+        let sessions = [session(recipeId: recipeId, photoUrl: nil, startedAt: Date())]
+        XCTAssertEqual(cookPhotoPaths(sessions: sessions, recipeId: recipeId), [])
+    }
 }

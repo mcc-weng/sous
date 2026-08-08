@@ -233,6 +233,13 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Downloads a stored cook photo's raw bytes for display. `cook-photos` is a
+    /// private bucket, so this goes through the authenticated client (RLS-checked) —
+    /// there's no plain public URL to hand `AsyncImage` directly.
+    func downloadPhoto(path: String) async -> Data? {
+        try? await client.storage.from("cook-photos").download(path: path)
+    }
+
     // MARK: write path — chat message + job (spec §3 step 1)
 
     func send(_ text: String) async {

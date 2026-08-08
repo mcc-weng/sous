@@ -21,3 +21,14 @@ func milestoneReactionText(count: Int, template: String?) -> String {
     let fallback = "哇,這是你第 {n} 次做這道菜了!越來越上手了呢 🔥"
     return (template ?? fallback).replacingOccurrences(of: "{n}", with: "\(count)")
 }
+
+/// Object paths (not full URLs — `cook-photos` is a private bucket, resolved via
+/// `AppModel.downloadPhoto`) for a recipe's own captured 上菜 photos, most recent cook
+/// first. Feeds `RecipePhotoCarousel`, closing the loop Pass 1b left open (that pass
+/// shipped the carousel placeholder-only because this column didn't exist yet).
+func cookPhotoPaths(sessions: [CookSession], recipeId: UUID) -> [String] {
+    sessions
+        .filter { $0.recipeId == recipeId && $0.photoUrl != nil }
+        .sorted { $0.startedAt > $1.startedAt }
+        .compactMap(\.photoUrl)
+}
