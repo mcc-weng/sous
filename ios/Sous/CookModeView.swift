@@ -260,7 +260,9 @@ struct CookModeView: View {
         .sheet(isPresented: $showStepList) {
             List(recipe.steps.indices, id: \.self) { i in
                 Button(recipe.steps[i].text) {
-                    stepIndex = i
+                    withAnimation(.easeInOut(duration: 0.14)) {
+                        stepIndex = i
+                    }
                     showStepList = false
                 }
             }
@@ -365,7 +367,9 @@ struct CookModeView: View {
     private var footerControls: some View {
         HStack {
             Button("← 上一步") {
-                stepIndex = clampedStepIndex(stepIndex - 1, stepCount: recipe.steps.count)
+                withAnimation(.easeInOut(duration: 0.14)) {
+                    stepIndex = clampedStepIndex(stepIndex - 1, stepCount: recipe.steps.count)
+                }
             }
             .disabled(stepIndex == 0)
             .foregroundStyle(StageTokens.inkDim)
@@ -381,7 +385,9 @@ struct CookModeView: View {
                     .frame(minHeight: 44)
             } else {
                 Button("下一步 →") {
-                    stepIndex = clampedStepIndex(stepIndex + 1, stepCount: recipe.steps.count)
+                    withAnimation(.easeInOut(duration: 0.14)) {
+                        stepIndex = clampedStepIndex(stepIndex + 1, stepCount: recipe.steps.count)
+                    }
                 }
                 .font(.custom(sansName, size: 13.5))
                 .tracking(2.2)
