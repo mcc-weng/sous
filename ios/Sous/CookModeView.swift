@@ -1,5 +1,6 @@
 // ios/Sous/CookModeView.swift
 import SwiftUI
+import UIKit
 
 /// C1-C4 · 備料/灶前/上菜/講評 — Reference: design_handoff_sous_m3/README.md §C1-C4 and
 /// docs/superpowers/specs/2026-08-07-m3-visual-restyle-pass1c-cook-mode-design.md.
@@ -21,6 +22,7 @@ struct CookModeView: View {
     @State private var rating: String?
     @State private var note = ""
     @State private var capturedPhotoData: Data?
+    @State private var showCamera = false
     @StateObject private var timerModel = CookTimerModel()
     @State private var showAddTimerSheet = false
     @State private var newTimerLabel = ""
@@ -70,7 +72,62 @@ struct CookModeView: View {
     }
 
     private var plateUpCapture: some View {
-        Color(StageTokens.bg).ignoresSafeArea()
+        VStack(spacing: 24) {
+            Text("上　菜")
+                .font(.custom(sansName, size: 10))
+                .tracking(4.0)
+                .foregroundStyle(StageTokens.brass)
+                .padding(.top, Spacing.lg)
+
+            Text("收工了。\n拍一張,我來寫。")
+                .font(.custom(serifName, size: 26))
+                .fontWeight(.light)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(StageTokens.ink)
+
+            ZStack {
+                if let capturedPhotoData, let uiImage = UIImage(data: capturedPhotoData) {
+                    Image(uiImage: uiImage).resizable().scaledToFill()
+                } else {
+                    Rectangle().stroke(StageTokens.ink.opacity(0.22), lineWidth: 1)
+                    Circle()
+                        .stroke(StageTokens.brass, lineWidth: 1.5)
+                        .frame(width: 50, height: 50)
+                        .overlay(Circle().fill(StageTokens.brass).frame(width: 8, height: 8))
+                }
+            }
+            .frame(width: 240, height: 240)
+            .clipped()
+            .onTapGesture { showCamera = true }
+
+            Button("拍照") { showCamera = true }
+                .font(.custom(sansName, size: 13.5))
+                .tracking(2.2)
+                .frame(minWidth: 160, minHeight: 50)
+                .foregroundStyle(StageTokens.bg)
+                .background(StageTokens.brass)
+
+            Button("跳過,直接聽講評") { Task { await finishCooking() } }
+                .font(.custom(sansName, size: 12))
+                .foregroundStyle(StageTokens.inkDim)
+                .frame(minHeight: 44)
+
+            Text("寫好後會收進食譜本 —— 那一頁就多一行你的紀錄")
+                .font(.system(size: 10.5))
+                .foregroundStyle(StageTokens.inkDim)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.pageMargin)
+
+            Spacer()
+        }
+        .padding(.horizontal, Spacing.pageMargin)
+        .background(StageTokens.bg)
+        .sheet(isPresented: $showCamera) {
+            CameraCaptureView { image in
+                capturedPhotoData = image.jpegData(compressionQuality: 0.85)
+                Task { await finishCooking() }
+            }
+        }
     }
 
     private var prepChecklist: some View {
@@ -504,8 +561,13 @@ struct CookModeView: View {
                     .update(Complete(completed_at: nowISO, step_ticks: Array(recipe.steps.indices)))
                     .eq("id", value: sessionId)
                     .execute()
-                await model.loadCookbook()
             } catch { print("complete cook session: \(error)") }
+            // Upload doesn't block the crossing back to paper — best-effort, per the
+            // design spec's error handling section.
+            if let capturedPhotoData {
+                Task { _ = await model.uploadCookPhoto(sessionId: sessionId, imageData: capturedPhotoData) }
+            }
+            await model.loadCookbook()
         }
         phase = planDay != nil ? .verdict : .done
     }

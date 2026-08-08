@@ -20,6 +20,10 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSCameraUsageDescription</key>
+	<string>用來拍下你煮好的成品照。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>找不到相機時,用來選一張成品照。</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>NotoSerifTC-Regular.otf</string>

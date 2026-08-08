@@ -211,6 +211,28 @@ final class AppModel: ObservableObject {
         } catch { print("cookbook load: \(error)") }
     }
 
+    /// Uploads a captured 上菜 photo to the household-scoped `cook-photos` bucket and
+    /// records its path on the session. Best-effort — matching `startSession()`'s
+    /// precedent, a failed upload doesn't block finishing the cook; `photo_url` simply
+    /// stays nil for that session.
+    func uploadCookPhoto(sessionId: UUID, imageData: Data) async -> String? {
+        guard let household else { return nil }
+        let path = "\(household.id.uuidString)/\(sessionId.uuidString).jpg"
+        do {
+            try await client.storage.from("cook-photos")
+                .upload(path, data: imageData, options: FileOptions(contentType: "image/jpeg", upsert: true))
+            struct PhotoUpdate: Encodable { let photo_url: String }
+            try await client.from("cook_sessions")
+                .update(PhotoUpdate(photo_url: path))
+                .eq("id", value: sessionId)
+                .execute()
+            return path
+        } catch {
+            print("cook photo upload: \(error)")
+            return nil
+        }
+    }
+
     // MARK: write path — chat message + job (spec §3 step 1)
 
     func send(_ text: String) async {

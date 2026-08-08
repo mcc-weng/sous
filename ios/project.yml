@@ -29,6 +29,8 @@ targets:
       properties:
         UILaunchScreen: {}
         CFBundleDisplayName: Sous
+        NSCameraUsageDescription: 用來拍下你煮好的成品照。
+        NSPhotoLibraryUsageDescription: 找不到相機時,用來選一張成品照。
         UIAppFonts:
           - NotoSerifTC-Regular.otf
           - NotoSerifTC-Medium.otf
