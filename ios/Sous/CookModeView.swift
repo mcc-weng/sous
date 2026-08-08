@@ -22,6 +22,9 @@ struct CookModeView: View {
     @State private var note = ""
     @State private var capturedPhotoData: Data?
     @StateObject private var timerModel = CookTimerModel()
+    @State private var showAddTimerSheet = false
+    @State private var newTimerLabel = ""
+    @State private var newTimerMinutes = 10
 
     private enum Phase { case prep, cooking, plateUp, verdict, done }
 
@@ -175,40 +178,84 @@ struct CookModeView: View {
     }
 
     private var teleprompter: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 0) {
             HStack {
-                Text("\(stepIndex + 1) / \(recipe.steps.count)")
-                    .font(.caption).foregroundStyle(.secondary)
+                Text("步驟 \(chineseNumeral(stepIndex + 1)) / \(chineseNumeral(recipe.steps.count))")
+                    .font(.custom(sansName, size: 10))
+                    .tracking(2.1)
+                    .foregroundStyle(StageTokens.brass)
                 Spacer()
                 Button("步驟列表") { showStepList = true }
+                    .font(.custom(sansName, size: 11))
+                    .foregroundStyle(StageTokens.inkDim)
+                    .frame(minHeight: 44)
             }
-            Spacer()
-            Text(recipe.steps[stepIndex].text)
-                .font(.title.bold())
-                .multilineTextAlignment(.center)
-            if let tip = recipe.steps[stepIndex].tip {
-                Text(tip).font(.body).foregroundStyle(.secondary)
-            }
-            if let duration = recipe.steps[stepIndex].durationSec {
-                Text(durationLabel(duration)).font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            HStack {
-                Button("上一步") {
-                    stepIndex = clampedStepIndex(stepIndex - 1, stepCount: recipe.steps.count)
-                }
-                .disabled(stepIndex == 0)
-                Spacer()
-                if stepIndex == recipe.steps.count - 1 {
-                    Button("完成") { Task { await finishCooking() } }
-                        .buttonStyle(.borderedProminent)
-                } else {
-                    Button("下一步") {
-                        stepIndex = clampedStepIndex(stepIndex + 1, stepCount: recipe.steps.count)
+            .padding(.horizontal, Spacing.pageMargin)
+            .padding(.top, Spacing.lg)
+
+            stepProgressRule
+
+            ScrollView {
+                VStack(spacing: 18) {
+                    if stepIndex > 0 {
+                        Text(recipe.steps[stepIndex - 1].text)
+                            .font(.custom(sansName, size: 15, relativeTo: .body))
+                            .fontWeight(.light)
+                            .foregroundStyle(StageTokens.inkDim.opacity(0.7))
                     }
-                    .buttonStyle(.borderedProminent)
+
+                    Text(recipe.steps[stepIndex].text)
+                        .font(.custom(serifName, size: 26))
+                        .fontWeight(.light)
+                        .lineSpacing(26 * 0.62)
+                        .foregroundStyle(StageTokens.ink)
+                        .multilineTextAlignment(.center)
+                        .id(stepIndex) // forces the 140ms opacity swap README requires —
+                                       // "no slide, the eye must not chase it at the stove"
+                        .transition(.opacity.animation(.easeInOut(duration: 0.14)))
+                        .accessibilityLabel(stepAccessibilityLabel)
+
+                    if let tip = recipe.steps[stepIndex].tip {
+                        HStack(alignment: .top, spacing: 10) {
+                            Rectangle().fill(StageTokens.brass).frame(width: 1)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("小當家眉批")
+                                    .font(.custom(sansName, size: 10))
+                                    .tracking(2.8)
+                                    .foregroundStyle(StageTokens.brass)
+                                Text(tip)
+                                    .font(.custom(sansName, size: 13))
+                                    .fontWeight(.light)
+                                    .foregroundStyle(StageTokens.brassSoft)
+                            }
+                        }
+                        .padding(.leading, 14)
+                    }
+
+                    if let duration = recipe.steps[stepIndex].durationSec {
+                        stepTimerRing(durationSec: duration)
+                    }
+
+                    if stepIndex < recipe.steps.count - 1 {
+                        Text(recipe.steps[stepIndex + 1].text)
+                            .font(.custom(sansName, size: 15, relativeTo: .body))
+                            .fontWeight(.light)
+                            .foregroundStyle(StageTokens.inkDim.opacity(0.55))
+                    }
+
+                    backgroundTimersSection
                 }
+                .padding(.horizontal, Spacing.pageMargin)
+                .padding(.vertical, Spacing.lg)
             }
+
+            footerControls
+        }
+        .background(StageTokens.bg)
+        .onChange(of: stepIndex) { _, newValue in
+            guard let duration = recipe.steps[newValue].durationSec else { return }
+            timerModel.setStepTimer(label: "步驟 \(chineseNumeral(newValue + 1))",
+                                    duration: TimeInterval(duration))
         }
         .sheet(isPresented: $showStepList) {
             List(recipe.steps.indices, id: \.self) { i in
@@ -218,6 +265,172 @@ struct CookModeView: View {
                 }
             }
         }
+    }
+
+    private var stepAccessibilityLabel: String {
+        "步驟 \(chineseNumeral(stepIndex + 1)),\(recipe.steps[stepIndex].text)"
+    }
+
+    private var stepProgressRule: some View {
+        HStack(spacing: 3) {
+            ForEach(recipe.steps.indices, id: \.self) { i in
+                Rectangle()
+                    .fill(i <= stepIndex ? StageTokens.brass : StageTokens.rule)
+                    .frame(height: 1)
+            }
+        }
+        .padding(.horizontal, Spacing.pageMargin)
+        .padding(.top, Spacing.sm)
+    }
+
+    private func stepTimerRing(durationSec: Int) -> some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let remaining = timerModel.stepTimer?.remaining(now: context.date) ?? TimeInterval(durationSec)
+            let progress = durationSec > 0 ? 1 - (remaining / TimeInterval(durationSec)) : 0
+            let isPaused = timerModel.stepTimer?.isRunning == false
+
+            ZStack {
+                Circle().stroke(StageTokens.ink.opacity(0.12), lineWidth: 6)
+                Circle()
+                    .trim(from: 0, to: max(0, min(1, progress)))
+                    .stroke(StageTokens.brass, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Circle().fill(StageTokens.bg).frame(width: 104, height: 104)
+                VStack(spacing: 2) {
+                    Text(formattedRemaining(remaining))
+                        .font(.custom(serifName, size: 26))
+                        .monospacedDigit()
+                        .foregroundStyle(StageTokens.ink)
+                    Text(isPaused ? "暫停中" : "計時中")
+                        .font(.custom(sansName, size: 10))
+                        .tracking(1.4)
+                        .foregroundStyle(StageTokens.inkDim)
+                }
+            }
+            .frame(width: 118, height: 118)
+            .onTapGesture { timerModel.toggleStepTimerPause() }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+                "步驟計時器,剩\(formattedRemainingSpoken(remaining))," +
+                "\(isPaused ? "暫停中" : "計時中")。輕點兩下\(isPaused ? "繼續" : "暫停")。"
+            )
+        }
+    }
+
+    private var backgroundTimersSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(timerModel.backgroundTimers) { timer in
+                backgroundTimerRow(timer)
+            }
+            Button {
+                showAddTimerSheet = true
+            } label: {
+                Text("＋ 計時器")
+                    .font(.custom(sansName, size: 12.5))
+                    .foregroundStyle(StageTokens.inkDim)
+            }
+            .frame(minHeight: 44)
+        }
+        .sheet(isPresented: $showAddTimerSheet) { addTimerSheet }
+    }
+
+    private func backgroundTimerRow(_ timer: CookTimer) -> some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let remaining = timer.remaining(now: context.date)
+            HStack {
+                Text(timer.label)
+                    .font(.custom(sansName, size: 12.5))
+                    .fontWeight(.light)
+                    .foregroundStyle(StageTokens.inkDim)
+                Spacer()
+                Text(formattedRemaining(remaining))
+                    .font(.custom(serifName, size: 19))
+                    .monospacedDigit()
+                    .foregroundStyle(StageTokens.brass)
+                Button(timer.isRunning ? "暫停" : "繼續") {
+                    timerModel.togglePause(id: timer.id)
+                }
+                .font(.custom(sansName, size: 11))
+                .foregroundStyle(StageTokens.brass)
+                .frame(minWidth: 44, minHeight: 44)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                "\(timer.label)計時器,剩\(formattedRemainingSpoken(remaining))," +
+                "\(timer.isRunning ? "計時中" : "暫停中")。"
+            )
+        }
+    }
+
+    private var footerControls: some View {
+        HStack {
+            Button("← 上一步") {
+                stepIndex = clampedStepIndex(stepIndex - 1, stepCount: recipe.steps.count)
+            }
+            .disabled(stepIndex == 0)
+            .foregroundStyle(StageTokens.inkDim)
+            .frame(minHeight: 44)
+            Spacer()
+            if stepIndex == recipe.steps.count - 1 {
+                Button("上菜") { phase = .plateUp }
+                    .font(.custom(sansName, size: 13.5))
+                    .tracking(2.2)
+                    .foregroundStyle(StageTokens.brass)
+                    .padding(.horizontal, 20).padding(.vertical, 12)
+                    .overlay(Rectangle().stroke(StageTokens.brass, lineWidth: 1))
+                    .frame(minHeight: 44)
+            } else {
+                Button("下一步 →") {
+                    stepIndex = clampedStepIndex(stepIndex + 1, stepCount: recipe.steps.count)
+                }
+                .font(.custom(sansName, size: 13.5))
+                .tracking(2.2)
+                .foregroundStyle(StageTokens.brass)
+                .padding(.horizontal, 20).padding(.vertical, 12)
+                .overlay(Rectangle().stroke(StageTokens.brass, lineWidth: 1))
+                .frame(minHeight: 44)
+            }
+        }
+        .padding(.horizontal, Spacing.pageMargin)
+        .padding(.vertical, Spacing.md)
+    }
+
+    private var addTimerSheet: some View {
+        NavigationStack {
+            Form {
+                TextField("名稱(例如:白飯)", text: $newTimerLabel)
+                Stepper("\(newTimerMinutes) 分鐘", value: $newTimerMinutes, in: 1...180)
+            }
+            .navigationTitle("新增計時器")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("開始") {
+                        timerModel.addBackgroundTimer(
+                            label: newTimerLabel.isEmpty ? "計時器" : newTimerLabel,
+                            duration: TimeInterval(newTimerMinutes * 60)
+                        )
+                        newTimerLabel = ""
+                        newTimerMinutes = 10
+                        showAddTimerSheet = false
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") { showAddTimerSheet = false }
+                }
+            }
+        }
+    }
+
+    private func formattedRemaining(_ seconds: TimeInterval) -> String {
+        let total = max(0, Int(seconds.rounded()))
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+
+    private func formattedRemainingSpoken(_ seconds: TimeInterval) -> String {
+        let total = max(0, Int(seconds.rounded()))
+        let minutes = total / 60
+        let secs = total % 60
+        return minutes > 0 ? "\(minutes)分\(secs)秒" : "\(secs)秒"
     }
 
     private var verdictPrompt: some View {
