@@ -120,6 +120,14 @@ struct CookModeView: View {
 
             Spacer()
         }
+        // Every child here is either a fixed size (the 240pt photo target) or sized to
+        // its own content (minWidth-only buttons, no Spacer-bearing HStack) — with
+        // nothing forcing expansion, the VStack itself only grows as wide as its
+        // widest child, leaving the StageTokens.bg background narrower than the
+        // screen and the system's default background visible as lines on both sides
+        // (caught on real-device testing). frame(maxWidth: .infinity) makes the VStack
+        // itself claim the full width; children stay centered within it.
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, Spacing.pageMargin)
         .background(StageTokens.bg)
         .sheet(isPresented: $showCamera) {
