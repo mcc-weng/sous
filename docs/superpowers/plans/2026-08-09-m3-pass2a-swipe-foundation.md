@@ -881,7 +881,13 @@ fire a job, documented inline):
                                              origin_dish_text: originDishText, note: note,
                                              context: context, date: date)))
                 .select("id").single().execute().value
-            return await pollJobResult(jobId: job.id)
+            // SwipeCandidate.modifyNote (added during Task 3's review — carries the
+            // note text for the 已依「...」改過 badge) isn't part of the job result
+            // itself; set it here from the note this call already has, so
+            // SwipeCardView reads the real note instead of its fallback text.
+            guard var revised = await pollJobResult(jobId: job.id) else { return nil }
+            revised.modifyNote = note
+            return revised
         } catch { print("recipe tweak request: \(error)"); return nil }
     }
 
