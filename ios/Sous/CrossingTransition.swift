@@ -127,6 +127,15 @@ struct CrossingTransition<Paper: View, Stage: View>: View {
                             .opacity(choreography.glowOpacity)
                             .allowsHitTesting(false)
                     }
+                    // Without this, `stage()`'s background stops at the safe-area
+                    // boundary (status bar / home indicator), leaving the system's
+                    // default light background visible as thin edges around the dark
+                    // content — read on real-device testing as "cropped" at the
+                    // bottom (where the glow reaches for) and stray light lines at the
+                    // sides. Stage screens are meant to feel like a distinct,
+                    // full-bleed environment; paper screens elsewhere intentionally
+                    // keep the normal safe-area inset, so this only applies here.
+                    .ignoresSafeArea()
             }
         }
         .onAppear {

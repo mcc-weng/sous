@@ -318,14 +318,41 @@ struct CookModeView: View {
             }
         }
         .sheet(isPresented: $showStepList) {
-            List(recipe.steps.indices, id: \.self) { i in
-                Button(recipe.steps[i].text) {
-                    withAnimation(.easeInOut(duration: 0.14)) {
-                        stepIndex = i
+            NavigationStack {
+                List(recipe.steps.indices, id: \.self) { i in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.14)) {
+                            stepIndex = i
+                        }
+                        showStepList = false
+                    } label: {
+                        HStack(alignment: .top, spacing: 10) {
+                            Text(chineseNumeral(i + 1))
+                                .font(.custom(sansName, size: 11))
+                                .foregroundStyle(StageTokens.brass)
+                                .frame(width: 20, alignment: .leading)
+                            Text(recipe.steps[i].text)
+                                .font(.custom(serifName, size: 14))
+                                .foregroundStyle(StageTokens.ink)
+                                .multilineTextAlignment(.leading)
+                        }
                     }
-                    showStepList = false
+                    .listRowBackground(StageTokens.bg)
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(StageTokens.bg)
+                .navigationTitle("步驟列表")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarColorScheme(.dark, for: .navigationBar)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("關閉") { showStepList = false }
+                            .foregroundStyle(StageTokens.brass)
+                    }
                 }
             }
+            .presentationBackground(StageTokens.bg)
         }
     }
 
@@ -573,6 +600,7 @@ struct CookModeView: View {
                 .foregroundStyle(PaperTokens.stock)
                 .background(model.personaTint)
                 .padding(.horizontal, Spacing.pageMargin)
+                .padding(.bottom, Spacing.lg)
         }
         .background(PaperTokens.stock)
     }
