@@ -82,6 +82,16 @@ final class CookTimerModelTests: XCTestCase {
         XCTAssertEqual(model.stepTimer!.remaining(), 100, accuracy: 0.5)
     }
 
+    func testClearStepTimerCancelsNotificationAndClearsStepTimer() {
+        let scheduler = FakeNotificationScheduler()
+        let model = CookTimerModel(scheduler: scheduler)
+        model.setStepTimer(label: "步驟 一", duration: 120)
+        let timerId = model.stepTimer!.id
+        model.clearStepTimer()
+        XCTAssertNil(model.stepTimer)
+        XCTAssertTrue(scheduler.cancelled.contains(timerId))
+    }
+
     // MARK: CookTimerModel — background timers independent of the step timer
 
     func testBackgroundTimerSurvivesStepTimerReplacement() {

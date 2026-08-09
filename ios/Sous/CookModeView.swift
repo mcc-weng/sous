@@ -310,9 +310,12 @@ struct CookModeView: View {
         }
         .background(StageTokens.bg)
         .onChange(of: stepIndex) { _, newValue in
-            guard let duration = recipe.steps[newValue].durationSec else { return }
-            timerModel.setStepTimer(label: "步驟 \(chineseNumeral(newValue + 1))",
-                                    duration: TimeInterval(duration))
+            if let duration = recipe.steps[newValue].durationSec {
+                timerModel.setStepTimer(label: "步驟 \(chineseNumeral(newValue + 1))",
+                                        duration: TimeInterval(duration))
+            } else {
+                timerModel.clearStepTimer()
+            }
         }
         .sheet(isPresented: $showStepList) {
             List(recipe.steps.indices, id: \.self) { i in
@@ -593,6 +596,9 @@ struct CookModeView: View {
     }
 
     private func finishCooking() async {
+        // Step timer has no purpose once cooking is over — cancel it unconditionally
+        // regardless of whether a session ID exists. Background timers are untouched.
+        timerModel.clearStepTimer()
         if let sessionId {
             struct Complete: Encodable { let completed_at: String; let step_ticks: [Int] }
             let nowISO = ISO8601DateFormatter().string(from: Date())
@@ -603,9 +609,15 @@ struct CookModeView: View {
                     .execute()
             } catch { print("complete cook session: \(error)") }
             // Upload doesn't block the crossing back to paper — best-effort, per the
-            // design spec's error handling section.
+            // design spec's error handling section. The detached task refreshes the
+            // cookbook again once the upload/DB-write actually completes, so
+            // RecipePhotoCarousel picks up the new photo_url without the user needing
+            // to wait for an unrelated future refresh.
             if let capturedPhotoData {
-                Task { _ = await model.uploadCookPhoto(sessionId: sessionId, imageData: capturedPhotoData) }
+                Task {
+                    _ = await model.uploadCookPhoto(sessionId: sessionId, imageData: capturedPhotoData)
+                    await model.loadCookbook()
+                }
             }
             await model.loadCookbook()
         }

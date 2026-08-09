@@ -101,6 +101,17 @@ final class CookTimerModel: ObservableObject {
         stepTimer = timer
     }
 
+    /// Cancels the step timer's scheduled notification and clears it — used when
+    /// navigating to a step with no duration (nothing to guide) or when the cook
+    /// finishes. Background timers are untouched; they're designed to keep running
+    /// and notifying independent of the cook flow's screen state.
+    func clearStepTimer() {
+        if let old = stepTimer {
+            scheduler.cancel(id: old.id)
+        }
+        stepTimer = nil
+    }
+
     // MARK: background timers — independent of the step timer and of each other
 
     @discardableResult
