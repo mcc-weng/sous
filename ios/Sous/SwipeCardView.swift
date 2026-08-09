@@ -56,10 +56,11 @@ struct SwipeCardStack: View {
             .tracking(2.52) // .24em at 10.5pt
             .foregroundStyle(PaperTokens.inkDim)
             GeometryReader { geo in
+                let fraction: CGFloat = total > 0 ? CGFloat(filled) / CGFloat(total) : 0
                 ZStack(alignment: .leading) {
                     Rectangle().fill(PaperTokens.rule).frame(height: 1)
                     Rectangle().fill(model.personaTint)
-                        .frame(width: geo.size.width * CGFloat(filled) / CGFloat(total), height: 1)
+                        .frame(width: geo.size.width * fraction, height: 1)
                         .animation(.easeOut(duration: 0.3), value: filled)
                 }
             }
@@ -82,7 +83,7 @@ struct SwipeCardStack: View {
                 }
                 Spacer()
                 if candidate.isUpdated {
-                    Text("已依「\(modifyText.isEmpty ? "你的要求" : modifyText)」改過")
+                    Text("已依「\(candidate.modifyNote ?? "你的要求")」改過")
                         .font(.custom(sansName, size: 9.5))
                         .foregroundStyle(PaperTokens.inkDim)
                 }
@@ -197,6 +198,7 @@ struct SwipeCardStack: View {
             HStack {
                 Button("取消") { showModifyPanel = false; modifyText = "" }
                     .font(.custom(sansName, size: 12.5))
+                    .frame(minHeight: 44)
                 Spacer()
                 Button("交給小當家改") {
                     guard !modifyText.isEmpty else { return }
@@ -206,6 +208,7 @@ struct SwipeCardStack: View {
                 }
                 .font(.custom(sansName, size: 12.5)).fontWeight(.semibold)
                 .foregroundStyle(model.personaTint)
+                .frame(minHeight: 44)
             }
         }
         .padding(16)

@@ -12,6 +12,11 @@ struct SwipeCandidate: Identifiable, Equatable {
     let prepNote: String?
     var shoppingItems: [SwipeShoppingItem] = []
     var isUpdated: Bool = false
+    /// The 但是… note this candidate was revised with, set by whoever reinserts it
+    /// (Tasks 4/7) so `SwipeCardStack`'s "已依「...」改過" badge can display the actual
+    /// note instead of falling back to generic text or leaking another candidate's
+    /// in-progress, unsaved `modifyText`.
+    var modifyNote: String? = nil
 }
 
 /// Mirrors `ShoppingItem`'s name/qty/section shape minus `id`/`checked`, which don't
