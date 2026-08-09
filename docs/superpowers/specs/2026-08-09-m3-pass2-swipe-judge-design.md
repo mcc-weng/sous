@@ -98,8 +98,28 @@ dedicated dispute flow. Simpler than either prior spec, and avoids inventing UI 
 ## 4. Data model changes
 
 New table:
-- **`recipe_swipes`** — `id`, `household_id`, `recipe_id`, `action` (check: like/pass/
-  modify), `context` (check: explore/ritual), `note` (nullable), `created_at`.
+- **`recipe_swipes`** — `id`, `household_id`, `recipe_id` (**nullable** — correction
+  found during Pass 2a plan-writing: verified against `state_api.py`/`plan-week.md`
+  that today's guided ritual proposes most dishes as free text via `set-plan`, never
+  calling `save-recipe` — only the recipe_intake pipeline populates `recipes`. Explore
+  Deck swipes always carry a real `recipe_id` since that surface only ever browses the
+  cookbook; Ritual Session swipes carry one only when the candidate happens to be a
+  cookbook recipe), `dish_text` (nullable — the free-text dish name when `recipe_id` is
+  null), `action` (check: like/pass/modify), `context` (check: explore/ritual), `note`
+  (nullable), `created_at`.
+- **Ritual deck delivery** — also found during plan-writing: a live brain turn takes
+  100–150s (per the existing B2 waiting-state design), so the swipe session cannot wait
+  on one per card or per rejection — that would be slower than the chat it's replacing,
+  not faster. The `ritual` job, in swipe mode, generates multiple candidates per day for
+  the full week in one brain turn and writes them as structured JSON into `jobs.result`
+  (existing column, previously unused by any handler) rather than requiring the client to
+  parse a chat message. The client fetches the job row it created once `status = 'done'`
+  and hydrates the local deck from `result`; ordinary left-swipe rejections pop the next
+  pre-generated candidate for that day with no new brain call. Only swipe-up (但是…)
+  triggers a fresh `recipe_tweak` job — same delivery mechanism (client polls that job's
+  row, reads `result` on completion), consistent with the app's existing polling-not-
+  realtime pattern (`AppModel.waitForReply`'s doc comment: realtime `postgres_changes`
+  was confirmed non-functional in this project during a 2026-07-19 exit check).
 
 Altered tables:
 - **`households`** gains `ritual_cadence_interval` (text, default `'weekly'`) and
