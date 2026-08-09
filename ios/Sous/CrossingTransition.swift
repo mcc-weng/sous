@@ -124,7 +124,6 @@ struct CrossingTransition<Paper: View, Stage: View>: View {
                     .opacity(choreography.stageOpacity)
                     .overlay(alignment: .bottom) {
                         StageTokens.glow
-                            .frame(height: 160)
                             .opacity(choreography.glowOpacity)
                             .allowsHitTesting(false)
                     }

@@ -621,7 +621,13 @@ struct CookModeView: View {
             }
             await model.loadCookbook()
         }
-        phase = planDay != nil ? .verdict : .done
+        // Every cook session ends in 講評, not just ones tied to tonight's plan —
+        // `submitVerdict()` already no-ops safely when there's no planDayId (nothing to
+        // attach a verdicts row to), so routing a plan-less cook straight to `.done`
+        // silently skipped the screen entirely instead of just skipping the write.
+        // Caught on real-device testing: cooking a recipe from the cookbook (no
+        // planDay) jumped straight from 上菜 to the closing screen.
+        phase = .verdict
     }
 
     private func submitVerdict() async {

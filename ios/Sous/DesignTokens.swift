@@ -35,12 +35,19 @@ enum StageTokens {
     static let rule = ink.opacity(0.20)
 
     /// Anchored to the bottom edge, arrives last in the crossing (500ms) — "light comes
-    /// on last, the way a gas ring does" (README §Motion).
+    /// on last, the way a gas ring does" (README §Motion). Self-contained square
+    /// sizing (rather than relying on a call-site `.frame(height:)`) so the radial
+    /// gradient renders as a soft circular glow that has already faded to fully
+    /// transparent by its own edge — an earlier version left the width unconstrained,
+    /// which stretched it into a wide rectangle and produced a visible hard-edged crop
+    /// against the black stage background instead of a soft glow (caught on
+    /// real-device testing).
     static var glow: some View {
         RadialGradient(
-            colors: [brass.opacity(0.20), .clear],
-            center: .center, startRadius: 0, endRadius: 160
+            colors: [brass.opacity(0.22), brass.opacity(0.08), Color.clear],
+            center: .center, startRadius: 0, endRadius: 150
         )
+        .frame(width: 340, height: 340)
     }
 }
 
