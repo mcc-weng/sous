@@ -36,6 +36,7 @@ create policy recipe_swipes_rw on recipe_swipes for all to authenticated
 
 -- Same pattern as 0005/0006: jobs_write only ever allows an explicit kind allowlist.
 -- recipe_tweak is inserted directly by the client on swipe-up (Task 5), not proxied
--- through a chat message first.
+-- through a chat message first. Merges with the allowlist from 0007 (recipe_intake,
+-- notif_generate) and 0005/0006 (chat, ritual).
 alter policy jobs_write on jobs
-  with check (is_member(household_id) and kind in ('chat', 'ritual', 'recipe_tweak'));
+  with check (is_member(household_id) and kind in ('chat','ritual','recipe_intake','notif_generate','recipe_tweak'));
