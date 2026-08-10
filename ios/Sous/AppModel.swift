@@ -314,6 +314,7 @@ final class AppModel: ObservableObject {
         struct JobStatusRow: Decodable { let status: String; let result: DeckResult? }
 
         for _ in 0..<90 {
+            guard !Task.isCancelled else { return nil }
             do {
                 let row: JobStatusRow = try await client.from("jobs")
                     .select("status,result").eq("id", value: jobId).single().execute().value
@@ -332,8 +333,17 @@ final class AppModel: ObservableObject {
                     return days
                 }
                 if row.status == "failed" { return nil }
-            } catch { print("poll ritual deck: \(error)") }
-            try? await Task.sleep(for: .seconds(2))
+            } catch is CancellationError {
+                return nil
+            } catch {
+                guard !Task.isCancelled else { return nil }
+                print("poll ritual deck: \(error)")
+            }
+            do {
+                try await Task.sleep(for: .seconds(2))
+            } catch {
+                return nil
+            }
         }
         return nil
     }
