@@ -449,6 +449,43 @@ def test_process_one_recipe_tweak_writes_result_no_chat_message(conn, monkeypatc
         conn.execute("delete from households where id = %s", (hid,))
 
 
+def test_generate_recipe_tweak_reply_wires_tools_env_prompt(conn, monkeypatch):
+    # Mirrors test_generate_chat_reply_wires_tools_env_cwd above — the other
+    # recipe_tweak tests monkeypatch generate_recipe_tweak_reply itself out, so
+    # nothing else exercises the real prompt-render/config-wiring path, in
+    # particular the deliberate ["Read"]-only allowed_tools (no state-write
+    # tool — a tweak never writes state directly, see config.json comment).
+    hid = _make_household(conn)
+    try:
+        conn.execute(
+            "insert into jobs (household_id, kind, payload) values (%s, 'recipe_tweak', %s)",
+            (hid, Jsonb({"origin_recipe_id": None, "origin_dish_text": "三杯雞",
+                         "note": "沒有蝦", "context": "ritual", "date": "2026-08-17"})),
+        )
+        seen = {}
+
+        def fake_brain(prompt, **kw):
+            seen["prompt"] = prompt
+            seen.update(kw)
+            return json.dumps({"recipe_id": None, "dish_text": "無蝦三杯雞",
+                               "dish_mode": "fast", "meta": "~25分",
+                               "pitch": "拿掉蝦照樣香", "prep_note": None,
+                               "shopping_items": []})
+
+        monkeypatch.setattr(main.brain, "run_brain", fake_brain)
+        job = db.claim_next_job(conn)
+        cfg = main.load_config()
+        main.generate_recipe_tweak_reply(conn, job, cfg)
+        assert seen["extra_env"] == {"SOUS_HOUSEHOLD_ID": hid}
+        assert seen["cwd"] == str(main.ROOT)
+        assert seen["allowed_tools"] == ["Read"]
+        assert "三杯雞" in seen["prompt"]
+        assert "沒有蝦" in seen["prompt"]
+        assert "{persona_pack}" not in seen["prompt"]  # persona actually rendered
+    finally:
+        conn.execute("delete from households where id = %s", (hid,))
+
+
 def test_process_one_recipe_tweak_bad_json_fails_with_preview(conn, monkeypatch):
     # Malformed-reply-from-the-brain must not crash the worker uninformatively —
     # process_one's except-branch catches the raised ValueError like any other
