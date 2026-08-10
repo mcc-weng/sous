@@ -507,6 +507,9 @@ def test_process_one_recipe_tweak_bad_json_fails_with_preview(conn, monkeypatch)
         ).fetchone()
         assert status == "failed"
         assert "not valid JSON" in result["error"]
+        assert conn.execute(
+            "select count(*) from chat_messages where household_id=%s", (hid,)
+        ).fetchone()[0] == 0
     finally:
         conn.execute("delete from households where id = %s", (hid,))
 

@@ -57,8 +57,18 @@ struct ExploreDeckView: View {
             if let revised = await model.requestRecipeTweak(originRecipeId: recipeId,
                                                              originDishText: candidate.dishText,
                                                              note: note, context: "explore", date: nil) {
-                deck.scheduleReinsert(revised)
+                reinsert(revised)
             }
+        }
+    }
+
+    private func reinsert(_ candidate: SwipeCandidate) {
+        if deck.candidates.isEmpty {
+            var tagged = candidate
+            tagged.isUpdated = true
+            deck.candidates.append(tagged)
+        } else {
+            deck.scheduleReinsert(candidate, afterCards: min(3, deck.candidates.count))
         }
     }
 }

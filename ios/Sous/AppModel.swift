@@ -89,7 +89,8 @@ final class AppModel: ObservableObject {
     func refreshHousehold() async {
         do {
             let rows: [Household] = try await client.from("households")
-                .select("id,name,worker_seen_at,timezone,persona_id").execute().value
+                .select("id,name,worker_seen_at,timezone,persona_id,ritual_cadence_interval,ritual_cadence_anchor_day")
+                .execute().value
             household = rows.first
             if let id = household?.id {
                 UserDefaults(suiteName: "group.com.mikeweng.sous")?.set(id.uuidString, forKey: "household_id")
@@ -199,6 +200,29 @@ final class AppModel: ObservableObject {
         preferencesContent = content
     }
 
+    func updateRitualCadence(interval: String, anchorDay: Int) async {
+        guard let household,
+              ["weekly", "biweekly"].contains(interval),
+              (1...7).contains(anchorDay) else { return }
+        struct Update: Encodable {
+            let ritual_cadence_interval: String
+            let ritual_cadence_anchor_day: Int
+        }
+        do {
+            try await client.from("households")
+                .update(Update(ritual_cadence_interval: interval,
+                               ritual_cadence_anchor_day: anchorDay))
+                .eq("id", value: household.id)
+                .execute()
+            self.household = Household(
+                id: household.id, name: household.name,
+                workerSeenAt: household.workerSeenAt, timezone: household.timezone,
+                personaId: household.personaId, ritualCadenceInterval: interval,
+                ritualCadenceAnchorDay: anchorDay
+            )
+        } catch { print("update ritual cadence: \(error)") }
+    }
+
     func loadCookbook() async {
         do {
             recipes = try await client.from("recipes")
@@ -251,6 +275,109 @@ final class AppModel: ObservableObject {
     /// `ritual`-kind job. The brain takes it from there.
     func startRitual() async {
         await sendSystemAction("（開始本週儀式）", jobKind: "ritual")
+    }
+
+    func startSwipeRitual() async -> UUID? {
+        struct Payload: Encodable { let mode: String }
+        struct NewJob: Encodable { let household_id: UUID; let kind: String; let payload: Payload }
+        struct JobRow: Decodable { let id: UUID }
+        guard let household else { return nil }
+        do {
+            let job: JobRow = try await client.from("jobs")
+                .insert(NewJob(household_id: household.id, kind: "ritual",
+                               payload: .init(mode: "swipe_deal")))
+                .select("id").single().execute().value
+            return job.id
+        } catch {
+            print("start swipe ritual: \(error)")
+            return nil
+        }
+    }
+
+    struct SwipeDeckDay {
+        let date: String
+        let candidates: [SwipeCandidate]
+    }
+
+    func pollRitualDeck(jobId: UUID) async -> [SwipeDeckDay]? {
+        struct CandidateRow: Decodable {
+            let recipe_id: UUID?
+            let dish_text: String?
+            let dish_mode: String?
+            let meta: String?
+            let pitch: String?
+            let prep_note: String?
+            let shopping_items: [SwipeShoppingItem]?
+        }
+        struct DayRow: Decodable { let date: String; let candidates: [CandidateRow] }
+        struct DeckResult: Decodable { let mode: String; let days: [DayRow] }
+        struct JobStatusRow: Decodable { let status: String; let result: DeckResult? }
+
+        for _ in 0..<90 {
+            do {
+                let row: JobStatusRow = try await client.from("jobs")
+                    .select("status,result").eq("id", value: jobId).single().execute().value
+                if row.status == "done", let result = row.result, result.mode == "swipe_deal" {
+                    let days = result.days.map { day in
+                        SwipeDeckDay(date: day.date, candidates: day.candidates.compactMap { row in
+                            guard let dishText = row.dish_text, !dishText.isEmpty else { return nil }
+                            return SwipeCandidate(id: UUID(), recipeId: row.recipe_id,
+                                                  dishText: dishText, mode: row.dish_mode,
+                                                  meta: row.meta, pitch: row.pitch,
+                                                  prepNote: row.prep_note,
+                                                  shoppingItems: row.shopping_items ?? [])
+                        })
+                    }
+                    guard days.count == 7, days.allSatisfy({ !$0.candidates.isEmpty }) else { return nil }
+                    return days
+                }
+                if row.status == "failed" { return nil }
+            } catch { print("poll ritual deck: \(error)") }
+            try? await Task.sleep(for: .seconds(2))
+        }
+        return nil
+    }
+
+    struct SwipeLockDayPayload: Encodable {
+        let date: String
+        let dish: String
+        let mode: String
+        let prep_note: String?
+    }
+
+    func submitSwipeLock(days: [SwipeLockDayPayload],
+                         shoppingItems: [SwipeShoppingItem]) async -> Bool {
+        struct Payload: Encodable {
+            let mode: String
+            let days: [SwipeLockDayPayload]
+            let shopping_items: [SwipeShoppingItem]
+        }
+        struct NewJob: Encodable { let household_id: UUID; let kind: String; let payload: Payload }
+        struct JobRow: Decodable { let id: UUID }
+        struct StatusRow: Decodable { let status: String }
+        guard let household, days.count == 7 else { return false }
+        do {
+            let job: JobRow = try await client.from("jobs")
+                .insert(NewJob(household_id: household.id, kind: "ritual",
+                               payload: .init(mode: "swipe_lock", days: days,
+                                              shopping_items: shoppingItems)))
+                .select("id").single().execute().value
+            for _ in 0..<45 {
+                let row: StatusRow = try await client.from("jobs")
+                    .select("status").eq("id", value: job.id).single().execute().value
+                if row.status == "done" {
+                    await loadWeekBoard()
+                    await loadShoppingItems()
+                    return true
+                }
+                if row.status == "failed" { return false }
+                try? await Task.sleep(for: .seconds(2))
+            }
+            return false
+        } catch {
+            print("submit swipe lock: \(error)")
+            return false
+        }
     }
 
     /// Drag-to-swap fires the exact same request a typed chat message would — the

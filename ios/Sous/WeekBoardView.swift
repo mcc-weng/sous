@@ -12,12 +12,8 @@ import SwiftUI
 /// it replaced drag-and-drop) is plain `onTapGesture`/`onLongPressGesture`, which is
 /// container-agnostic and carries over unchanged.
 ///
-/// Scope note — dual ritual entry: the README shows next week offering both ritual
-/// models by name ("ink-filled 滑牌排 and outlined 用寫的"). Pass 1a has no swipe ritual
-/// to link a second button to — that's Pass 2, a separate future plan — so this keeps
-/// the single existing 開始本週儀式 entry point, restyled to the button language
-/// (`PaperTokens.ink` fill, `PaperTokens.stock` text) but pointing at the same
-/// `model.startRitual()` written ritual as before.
+/// Pass 2a adds both ritual models to next week: the ink-filled 滑牌排 opens the
+/// full-screen swipe session, while the outlined 用寫的 preserves the guided ritual.
 ///
 /// Scope note — cooked-day "verdict": the mock's 神作/普通 captions on cooked days are
 /// real verdict text (the `verdicts` table, keyed by `plan_day_id`). `PlanDay` itself
@@ -56,6 +52,7 @@ struct WeekBoardView: View {
     /// view loaded (e.g. app reopened after the ritual finished elsewhere) should not
     /// re-show the "just locked" moment — only an in-session transition should.
     @State private var justLockedWeekOf: String?
+    @State private var showSwipeRitual = false
 
     private var serifName: String { serifFontName(bundled: FontBook.isSerifBundled) }
     private var sansName: String { sansFontName(bundled: FontBook.isSansBundled) }
@@ -102,6 +99,9 @@ struct WeekBoardView: View {
             }
         }
         .task { await model.loadWeekBoard() }
+        .fullScreenCover(isPresented: $showSwipeRitual) {
+            RitualSwipeSessionView().environmentObject(model)
+        }
     }
 
     // MARK: Running heads
@@ -163,29 +163,35 @@ struct WeekBoardView: View {
         }
     }
 
-    /// Single ritual entry point — the "還沒排 —— 現在排嗎?" prompt plus one ink-filled
-    /// button, per the scope note above (no second, outlined 用寫的 button).
     private var startRitualPrompt: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             Text("還沒排 —— 現在排嗎?")
                 .font(.custom(serifName, size: 17))
                 .lineSpacing(8.5) // lh 1.7 at 17pt: (1.7 - 1.2) * 17
                 .foregroundStyle(PaperTokens.ink)
                 .multilineTextAlignment(.center)
 
+            Button { showSwipeRitual = true } label: {
+                Text("滑牌排")
+                    .font(.custom(sansName, size: 12)).fontWeight(.medium).tracking(2.4)
+                    .foregroundStyle(PaperTokens.stock)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(PaperTokens.ink)
+            }
+            .buttonStyle(.plain)
+
             Button {
                 pendingRitualStart = true
                 ritualWaitStartedAt = Date()
                 Task { await model.startRitual() }
             } label: {
-                Text("開始本週儀式")
+                Text("用寫的")
                     .font(.custom(sansName, size: 12))
                     .fontWeight(.medium)
                     .tracking(2.4) // .2em at 12pt
-                    .foregroundStyle(PaperTokens.stock)
-                    .frame(maxWidth: .infinity)
-                    .padding(13)
-                    .background(PaperTokens.ink)
+                    .foregroundStyle(PaperTokens.ink)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .overlay(Rectangle().stroke(PaperTokens.ink, lineWidth: 1))
             }
             .buttonStyle(.plain)
         }
@@ -255,7 +261,7 @@ struct WeekBoardView: View {
         let selected = selectedForSwap == day.date
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 14) {
-                Text(weekdayGlyph(for: day.date))
+                Text(weekdayGlyph(for: day.date, timezone: householdTimezone))
                     .font(.custom(serifName, size: 15))
                     .foregroundStyle(selected ? model.personaTint : PaperTokens.ink)
                     .frame(width: 18, alignment: .leading)
@@ -292,7 +298,7 @@ struct WeekBoardView: View {
         let selected = selectedForSwap == day.date
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 14) {
-                Text(weekdayGlyph(for: day.date))
+                Text(weekdayGlyph(for: day.date, timezone: householdTimezone))
                     .font(.custom(serifName, size: 15))
                     .foregroundStyle(model.personaTint)
                     .frame(width: 18, alignment: .leading)
@@ -336,7 +342,7 @@ struct WeekBoardView: View {
     /// mid-swap isn't a valid target for another gesture.
     private func pendingSwapRow(_ day: PlanDay) -> some View {
         HStack(spacing: 14) {
-            Text(weekdayGlyph(for: day.date))
+            Text(weekdayGlyph(for: day.date, timezone: householdTimezone))
                 .font(.custom(serifName, size: 15))
                 .foregroundStyle(PaperTokens.inkDim)
                 .frame(width: 18, alignment: .leading)
@@ -374,22 +380,6 @@ struct WeekBoardView: View {
     private func tonightCaption(_ day: PlanDay) -> String {
         if let prep = day.prepNote, !prep.isEmpty { return "今晚 · \(prep)" }
         return "今晚"
-    }
-
-    private static let weekdayGlyphs = ["日", "一", "二", "三", "四", "五", "六"] // Calendar weekday: Sun=1...Sat=7
-
-    /// Maps a `PlanDay.date` ("YYYY-MM-DD") to its Chinese weekday glyph, in household
-    /// time — mirrors `weekMonday`'s Sun=1...Sat=7 convention (WeekBoardLogic.swift) so
-    /// Monday always reads 一 regardless of device locale.
-    private func weekdayGlyph(for dateStr: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = householdTimezone
-        guard let date = formatter.date(from: dateStr) else { return "" }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = householdTimezone
-        let weekday = calendar.component(.weekday, from: date)
-        return Self.weekdayGlyphs[weekday - 1]
     }
 
     private func handleLongPress(on date: String) {

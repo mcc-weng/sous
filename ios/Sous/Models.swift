@@ -77,11 +77,15 @@ struct Household: Codable {
     let workerSeenAt: Date?
     let timezone: String
     let personaId: UUID
+    let ritualCadenceInterval: String
+    let ritualCadenceAnchorDay: Int
 
     enum CodingKeys: String, CodingKey {
         case id, name, timezone
         case workerSeenAt = "worker_seen_at"
         case personaId = "persona_id"
+        case ritualCadenceInterval = "ritual_cadence_interval"
+        case ritualCadenceAnchorDay = "ritual_cadence_anchor_day"
     }
 }
 
@@ -90,6 +94,20 @@ func chefIsPresent(workerSeenAt: Date?, now: Date = Date(),
                    threshold: TimeInterval = 60) -> Bool {
     guard let seen = workerSeenAt else { return false }
     return now.timeIntervalSince(seen) < threshold
+}
+
+private let weekdayGlyphs = ["日", "一", "二", "三", "四", "五", "六"]
+
+func weekdayGlyph(for dateStr: String, timezone: TimeZone) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.timeZone = timezone
+    guard let date = formatter.date(from: dateStr) else { return "" }
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timezone
+    let weekday = calendar.component(.weekday, from: date)
+    guard weekdayGlyphs.indices.contains(weekday - 1) else { return "" }
+    return weekdayGlyphs[weekday - 1]
 }
 
 struct Ingredient: Codable, Equatable, Hashable {

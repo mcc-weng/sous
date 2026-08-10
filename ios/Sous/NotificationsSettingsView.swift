@@ -3,9 +3,8 @@ import UserNotifications
 
 /// E3 · 設定 (settings as colophon) — restyled per design_handoff_sous_m3/README.md
 /// "E3 · 設定" and `Sous App v2.dc.html` lines 718-839. That mock has three sections
-/// (儀式節奏, 便條通知, 這本書是為誰寫的) plus an imprint. 儀式節奏 (ritual cadence) is
-/// explicit Pass 2 scope (tied to swipe-ritual scheduling that doesn't exist yet) and
-/// is NOT built here. 這本書是為誰寫的 (structured preferences display) doesn't exist
+/// (儀式節奏, 便條通知, 這本書是為誰寫的) plus an imprint. Pass 2a adds the ritual
+/// interval and reminder-day controls. 這本書是為誰寫的 (structured preferences display) doesn't exist
 /// anywhere in the app today — `AppModel.preferencesContent` is stored freeform text
 /// and is never displayed, only used to gate onboarding (`needsOnboarding`) — building
 /// the mock's per-field dotted-leader rows would mean parsing that free text back into
@@ -54,6 +53,7 @@ struct NotificationsSettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    ritualCadenceSection
                     notificationsSection
                     preferencesSection
                     imprint
@@ -70,12 +70,87 @@ struct NotificationsSettingsView: View {
         }
     }
 
+    // MARK: 儀式節奏
+
+    private var ritualCadenceSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionLabel("儀式節奏")
+                .padding(.top, Spacing.pageMargin)
+            HStack(spacing: 8) {
+                cadenceChip("每週", interval: "weekly")
+                cadenceChip("每兩週", interval: "biweekly")
+            }
+            Text("提醒日")
+                .font(.custom(sansName, size: 10.5))
+                .foregroundStyle(PaperTokens.inkDim)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
+                ForEach(Array(["日", "一", "二", "三", "四", "五", "六"].enumerated()), id: \.offset) { index, glyph in
+                    anchorDayChip("週\(glyph)", day: index + 1)
+                }
+            }
+            Text(cadenceExplanation)
+                .font(.custom(sansName, size: 11).weight(.light))
+                .foregroundStyle(PaperTokens.inkDim)
+        }
+        .padding(.horizontal, Spacing.pageMargin)
+        .padding(.bottom, Spacing.lg)
+        .overlay(alignment: .bottom) { Rectangle().fill(PaperTokens.rule).frame(height: 1) }
+    }
+
+    private func cadenceChip(_ label: String, interval: String) -> some View {
+        let selected = model.household?.ritualCadenceInterval == interval
+        return Button {
+            Task {
+                await model.updateRitualCadence(
+                    interval: interval,
+                    anchorDay: model.household?.ritualCadenceAnchorDay ?? 1
+                )
+            }
+        } label: {
+            Text(label)
+                .font(.custom(sansName, size: 12))
+                .foregroundStyle(selected ? PaperTokens.stock : PaperTokens.ink)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(selected ? model.personaTint : Color.clear)
+                .overlay(Rectangle().stroke(selected ? Color.clear : PaperTokens.ruleStrong, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func anchorDayChip(_ label: String, day: Int) -> some View {
+        let selected = model.household?.ritualCadenceAnchorDay == day
+        return Button {
+            Task {
+                await model.updateRitualCadence(
+                    interval: model.household?.ritualCadenceInterval ?? "weekly",
+                    anchorDay: day
+                )
+            }
+        } label: {
+            Text(label)
+                .font(.custom(sansName, size: 11.5))
+                .foregroundStyle(selected ? PaperTokens.stock : PaperTokens.ink)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(selected ? model.personaTint : Color.clear)
+                .overlay(Rectangle().stroke(selected ? Color.clear : PaperTokens.rule, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var cadenceExplanation: String {
+        let interval = model.household?.ritualCadenceInterval == "biweekly" ? "每兩週" : "每週"
+        let index = max(1, min(model.household?.ritualCadenceAnchorDay ?? 1, 7)) - 1
+        let glyph = ["日", "一", "二", "三", "四", "五", "六"][index]
+        return "\(interval)週\(glyph)提醒你開始排菜儀式。"
+    }
+
     // MARK: 便條通知
 
     private var notificationsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             sectionLabel("便條通知")
-                .padding(.top, Spacing.pageMargin)
+                .padding(.top, Spacing.lg + 4)
             notificationRow
         }
     }

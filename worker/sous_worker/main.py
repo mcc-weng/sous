@@ -25,8 +25,14 @@ def load_config() -> dict:
 
 
 def _apologize(conn, household_id: str, job_id: str) -> None:
-    kind = conn.execute("select kind from jobs where id=%s", (job_id,)).fetchone()[0]
-    if kind == "notif_generate":
+    kind, payload = conn.execute(
+        "select kind, payload from jobs where id=%s", (job_id,)
+    ).fetchone()
+    # Structured jobs are observed through jobs.status/result and have no matching
+    # chat request. Injecting an apology into chat would violate that contract and
+    # make an unrelated conversation appear to have produced the failure.
+    if (kind in ("notif_generate", "recipe_tweak")
+            or (kind == "ritual" and payload.get("mode") in ("swipe_deal", "swipe_lock"))):
         return
     copy_pack = db.get_household(conn, household_id)["copy_pack"]
     message = copy_pack.get("failure_message", "Something went wrong — please try again.")
