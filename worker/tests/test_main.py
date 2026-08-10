@@ -509,3 +509,145 @@ def test_process_one_recipe_tweak_bad_json_fails_with_preview(conn, monkeypatch)
         assert "not valid JSON" in result["error"]
     finally:
         conn.execute("delete from households where id = %s", (hid,))
+
+
+from zoneinfo import ZoneInfo
+
+
+def _next_target_week_of() -> datetime.date:
+    return main.context.week_monday(
+        datetime.datetime.now(ZoneInfo("Australia/Sydney")).date()
+    ) + datetime.timedelta(days=7)
+
+
+def test_process_one_ritual_swipe_deal_writes_deck_to_result(conn, monkeypatch):
+    hid = _make_household(conn)
+    try:
+        job_id = conn.execute(
+            "insert into jobs (household_id, kind, payload) values (%s, 'ritual', %s) "
+            "returning id::text",
+            (hid, Jsonb({"mode": "swipe_deal"})),
+        ).fetchone()[0]
+        fake_deck = {"mode": "swipe_deal", "days": [
+            {"date": "2026-08-17", "candidates": [
+                {"recipe_id": None, "dish_text": "三杯雞", "dish_mode": "fast",
+                 "meta": "~25分", "pitch": "香", "prep_note": None, "shopping_items": []}]}]}
+        monkeypatch.setattr(main, "generate_ritual_swipe_deal_reply",
+                            lambda *a, **kw: json.dumps(fake_deck))
+        assert main.process_one(conn, main.load_config()) is True
+        row = conn.execute("select status, result from jobs where id=%s", (job_id,)).fetchone()
+        assert row[0] == "done"
+        assert row[1]["days"][0]["candidates"][0]["dish_text"] == "三杯雞"
+    finally:
+        conn.execute("delete from households where id = %s", (hid,))
+
+
+def test_process_one_ritual_swipe_deal_ensures_proposing_week(conn, monkeypatch):
+    # Regression guard: swipe_deal must create the target week's plan_weeks row
+    # itself (mirroring generate_ritual_reply's ensure_proposing_week call) — iOS's
+    # startSwipeRitual() never does, so without this a later swipe_lock's
+    # state_api.set_plan call has no week row to lock and fails with "start the
+    # ritual first". Exercises the real generate_ritual_swipe_deal_reply (only
+    # brain.run_brain mocked), unlike the test above which stubs the whole
+    # function out and so can't catch this.
+    hid = _make_household(conn)
+    try:
+        conn.execute(
+            "insert into jobs (household_id, kind, payload) values (%s, 'ritual', %s)",
+            (hid, Jsonb({"mode": "swipe_deal"})),
+        )
+        monkeypatch.setattr(main.brain, "run_brain",
+                            lambda *a, **kw: json.dumps({"mode": "swipe_deal", "days": []}))
+        assert main.process_one(conn, main.load_config()) is True
+        target_week_of = _next_target_week_of()
+        row = conn.execute(
+            "select status from plan_weeks where household_id=%s and week_of=%s",
+            (hid, target_week_of),
+        ).fetchone()
+        assert row is not None and row[0] == "proposing"
+    finally:
+        conn.execute("delete from households where id = %s", (hid,))
+
+
+def test_process_one_ritual_swipe_lock_calls_set_plan(conn, monkeypatch):
+    hid = _make_household(conn)
+    try:
+        week_of = _next_target_week_of()
+        conn.execute(
+            "insert into plan_weeks (household_id, week_of, status) values (%s, %s, 'proposing')",
+            (hid, week_of),
+        )
+        days = [{"date": (week_of + datetime.timedelta(days=i)).isoformat(),
+                 "dish": f"菜{i}", "mode": "fast"} for i in range(7)]
+        job_id = conn.execute(
+            "insert into jobs (household_id, kind, payload) values (%s, 'ritual', %s) "
+            "returning id::text",
+            (hid, Jsonb({"mode": "swipe_lock", "days": days, "shopping_items": []})),
+        ).fetchone()[0]
+        assert main.process_one(conn, main.load_config()) is True
+        week_status = conn.execute(
+            "select status from plan_weeks where household_id=%s and week_of=%s",
+            (hid, week_of),
+        ).fetchone()[0]
+        assert week_status == "locked"
+        result = conn.execute("select result from jobs where id=%s", (job_id,)).fetchone()[0]
+        assert result["mode"] == "swipe_lock"
+    finally:
+        conn.execute("delete from households where id = %s", (hid,))
+
+
+def test_process_one_ritual_swipe_lock_enqueues_notifications(conn, monkeypatch):
+    # The post-success gate (process_one's else-branch) must treat a locked-via-
+    # swipe week the same as a locked-via-written-ritual week — mode ==
+    # "ritual_swipe_lock" has to be in the enqueue check alongside "ritual", not
+    # just "ritual_swipe_deal" excluded from it.
+    hid = _make_household(conn)
+    try:
+        week_of = _next_target_week_of()
+        conn.execute(
+            "insert into plan_weeks (household_id, week_of, status) values (%s, %s, 'proposing')",
+            (hid, week_of),
+        )
+        days = [{"date": (week_of + datetime.timedelta(days=i)).isoformat(),
+                 "dish": f"菜{i}", "mode": "fast"} for i in range(7)]
+        conn.execute(
+            "insert into jobs (household_id, kind, payload) values (%s, 'ritual', %s)",
+            (hid, Jsonb({"mode": "swipe_lock", "days": days, "shopping_items": []})),
+        )
+        called = {}
+
+        def fake_enqueue(conn, household_id, target_week_of):
+            called["household_id"] = household_id
+            called["target_week_of"] = target_week_of
+            return False
+
+        monkeypatch.setattr(main.db, "enqueue_week_notifications_if_locked", fake_enqueue)
+        assert main.process_one(conn, main.load_config()) is True
+        assert called.get("household_id") == hid
+    finally:
+        conn.execute("delete from households where id = %s", (hid,))
+
+
+def test_process_one_ritual_swipe_deal_does_not_enqueue_notifications(conn, monkeypatch):
+    # The mirror-image guard: swipe_deal never locks a week, so it must stay
+    # excluded from the same gate — widening it to all three modes would fire a
+    # premature notification enqueue for a week nobody confirmed yet.
+    hid = _make_household(conn)
+    try:
+        conn.execute(
+            "insert into jobs (household_id, kind, payload) values (%s, 'ritual', %s)",
+            (hid, Jsonb({"mode": "swipe_deal"})),
+        )
+        monkeypatch.setattr(main.brain, "run_brain",
+                            lambda *a, **kw: json.dumps({"mode": "swipe_deal", "days": []}))
+        called = {"hit": False}
+
+        def fake_enqueue(*a, **kw):
+            called["hit"] = True
+            return False
+
+        monkeypatch.setattr(main.db, "enqueue_week_notifications_if_locked", fake_enqueue)
+        assert main.process_one(conn, main.load_config()) is True
+        assert called["hit"] is False
+    finally:
+        conn.execute("delete from households where id = %s", (hid,))

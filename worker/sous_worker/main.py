@@ -12,6 +12,8 @@ from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
+import state_api  # top-level module in worker/, not part of the sous_worker package —
+                  # ritual_swipe_lock calls state_api.set_plan directly (no subprocess).
 from sous_worker import brain, context, db, gemini_intake
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent  # worker/
@@ -114,6 +116,38 @@ def generate_recipe_tweak_reply(conn, job: db.Job, cfg: dict) -> str:
                            extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
 
 
+def generate_ritual_swipe_deal_reply(conn, job: db.Job, cfg: dict) -> str:
+    """swipe_deal deals a full week of candidates in one brain turn instead of the
+    written ritual's back-and-forth — fetch_ritual_swipe_context reuses the same
+    underlying signal (banger/craving/allergy judgment), only the output shape
+    differs. Ensures the target week's plan_weeks row exists first, exactly like
+    generate_ritual_reply does for the written path: swipe_lock's later
+    state_api.set_plan call requires that row to already exist, and iOS's
+    startSwipeRitual() (Task 7) never creates it itself — only inserts the job."""
+    ctx = context.fetch_ritual_swipe_context(conn, job.household_id, cfg["history_limit"])
+    db.ensure_proposing_week(conn, job.household_id,
+                             datetime.date.fromisoformat(ctx["target_week_of"]))
+    template = (ROOT / "prompts" / "ritual_swipe.md").read_text()
+    prompt = context.build_ritual_swipe_prompt(template, ctx)
+    return brain.run_brain(prompt, model=cfg["chat_model"],
+                           timeout=cfg["chat_timeout_sec"],
+                           allowed_tools=cfg["ritual_swipe_deal_allowed_tools"],
+                           cwd=str(ROOT),
+                           extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
+
+
+def run_ritual_swipe_lock(conn, job: db.Job) -> dict:
+    """swipe_lock is a mechanical pass-through, not a brain turn — every day is
+    already decided by swiping, so there's no judgment left to make. Calling
+    set_plan directly (not via a claude -p subprocess) reuses its existing
+    validation/idempotency/week-lock logic without duplicating it, and skips the
+    100-150s wait a real brain call would add to the one moment that least needs it."""
+    result = state_api.set_plan(conn, job.household_id, job.payload["days"],
+                                job.payload.get("shopping_items", []),
+                                reasoning=job.payload.get("reasoning"))
+    return {"mode": "swipe_lock", "week_of": str(result["week_of"])}
+
+
 def generate_notif_reply(conn, job: db.Job, cfg: dict) -> str:
     """notif_generate has two payload shapes, distinguished by notif_kind:
     'week_batch' (Task 3, this function's only branch so far) and 'verdict_action'
@@ -146,10 +180,18 @@ def process_one(conn, cfg: dict) -> bool:
         return False
     try:
         if job.kind in ("chat", "ritual"):
-            mode = ("ritual" if job.kind == "ritual"
-                    or db.get_proposing_week(conn, job.household_id) else "chat")
-            reply = (generate_ritual_reply(conn, job, cfg) if mode == "ritual"
-                     else generate_chat_reply(conn, job, cfg))
+            ritual_mode = job.payload.get("mode") if job.kind == "ritual" else None
+            if ritual_mode == "swipe_deal":
+                mode = "ritual_swipe_deal"
+                reply = generate_ritual_swipe_deal_reply(conn, job, cfg)
+            elif ritual_mode == "swipe_lock":
+                mode = "ritual_swipe_lock"
+                reply = None  # no brain turn — handled in the completion block below
+            else:
+                mode = ("ritual" if job.kind == "ritual"
+                        or db.get_proposing_week(conn, job.household_id) else "chat")
+                reply = (generate_ritual_reply(conn, job, cfg) if mode == "ritual"
+                         else generate_chat_reply(conn, job, cfg))
         elif job.kind == "recipe_intake":
             mode = "recipe_intake"
             reply = generate_recipe_intake_reply(conn, job, cfg)
@@ -168,6 +210,14 @@ def process_one(conn, cfg: dict) -> bool:
                 except json.JSONDecodeError:
                     raise ValueError(f"recipe_tweak reply was not valid JSON: {reply[:200]!r}")
                 db.complete_job(conn, job.id, parsed)
+            elif mode == "ritual_swipe_deal":
+                try:
+                    parsed = json.loads(reply)
+                except json.JSONDecodeError:
+                    raise ValueError(f"ritual swipe_deal reply was not valid JSON: {reply[:200]!r}")
+                db.complete_job(conn, job.id, parsed)
+            elif mode == "ritual_swipe_lock":
+                db.complete_job(conn, job.id, run_ritual_swipe_lock(conn, job))
             else:
                 if job.kind != "notif_generate":
                     db.insert_chef_message(conn, job.household_id, reply, job.id)
@@ -180,7 +230,7 @@ def process_one(conn, cfg: dict) -> bool:
         else:
             db.requeue_job(conn, job.id)
     else:
-        if mode == "ritual":
+        if mode in ("ritual", "ritual_swipe_lock"):
             try:
                 household = db.get_household(conn, job.household_id)
                 now = datetime.datetime.now(ZoneInfo(household["timezone"]))

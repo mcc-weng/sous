@@ -344,3 +344,30 @@ def test_fetch_recipe_tweak_context_includes_persona_and_date(conn, api_hid):
     )
     assert "小當家" in ctx["persona_pack"]
     assert ctx["today"] and ctx["weekday"]
+
+
+def test_fetch_ritual_swipe_context_reuses_ritual_context_fields(conn, api_hid):
+    ctx = context.fetch_ritual_swipe_context(conn, api_hid)
+    # Same underlying signal as the written ritual — banger/craving/allergy judgment
+    # doesn't change just because the interaction model did.
+    for key in ("recent_weeks", "inbox", "verdicts_recent", "staples_flagged",
+                "preferences", "cookbook_index", "target_week_of"):
+        assert key in ctx
+
+
+def test_build_ritual_swipe_prompt_substitutes_target_week(conn, api_hid):
+    ctx = context.fetch_ritual_swipe_context(conn, api_hid)
+    template = "week: {target_week_of}"
+    prompt = context.build_ritual_swipe_prompt(template, ctx)
+    assert ctx["target_week_of"] in prompt
+
+
+def test_fetch_ritual_swipe_context_includes_persona_and_date(conn, api_hid):
+    # Same rule Task 5 pinned down for recipe_tweak (see the test above): every
+    # fetch_*_context/build_*_prompt pair sources {persona_pack}/{today}/{weekday}
+    # from db.get_household — swipe_deal must not be the one ritual mode that
+    # silently drops persona_pack, and ritual_swipe.md's own first line is
+    # {persona_pack} so a missing key here would leave it unrendered in the prompt.
+    ctx = context.fetch_ritual_swipe_context(conn, api_hid)
+    assert "小當家" in ctx["persona_pack"]
+    assert ctx["today"] and ctx["weekday"]

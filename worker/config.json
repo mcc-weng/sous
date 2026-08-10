@@ -6,6 +6,7 @@
   "recipe_intake_allowed_tools": ["Bash(.venv/bin/python state_api.py:*)", "WebFetch"],
   "recipe_tweak_timeout_sec": 180,
   "recipe_tweak_allowed_tools": ["Read"],
+  "ritual_swipe_deal_allowed_tools": ["Read"],
   "poll_interval_sec": 3,
   "heartbeat_interval_sec": 15,
   "stale_after_sec": 600,

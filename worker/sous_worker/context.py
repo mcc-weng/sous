@@ -327,3 +327,39 @@ def build_recipe_tweak_prompt(template: str, ctx: dict) -> str:
     for key, value in ctx.items():
         prompt = prompt.replace("{" + key + "}", str(value))
     return prompt
+
+
+def fetch_ritual_swipe_context(conn, household_id: str, history_limit: int = 20) -> dict:
+    """Same underlying signal as fetch_ritual_context — the swipe deck's card-dealing
+    judgment (banger/craving/allergy rules) doesn't change with the interaction model,
+    only the output shape does. Deliberately does not call ensure_proposing_week here
+    (kept a pure read, like every other fetch_*_context) — main.py's
+    generate_ritual_swipe_deal_reply does that itself, mirroring generate_ritual_reply.
+
+    Returns a flat dict (same shape as fetch_recipe_tweak_context) because
+    build_ritual_swipe_prompt below is a generic key-by-key substitution — every key
+    here must be a template placeholder name, sourced from db.get_household exactly
+    like every other fetch_*_context/build_*_prompt pair (persona_pack/today/weekday),
+    not hardcoded — ritual_swipe.md's own first line is {persona_pack}."""
+    household = db.get_household(conn, household_id)
+    now = datetime.datetime.now(ZoneInfo(household["timezone"]))
+    target_week_of = week_monday(now.date()) + datetime.timedelta(days=7)
+    return {
+        "persona_pack": household["prompt_pack"],
+        "today": now.strftime("%Y-%m-%d"),
+        "weekday": _WEEKDAYS_ZH[now.weekday()],
+        "target_week_of": target_week_of.isoformat(),
+        "recent_weeks": _render_recent_weeks(conn, household_id, before=target_week_of, weeks_back=4),
+        "inbox": _render_inbox(conn, household_id),
+        "verdicts_recent": _render_verdicts_recent(conn, household_id),
+        "staples_flagged": _render_staples_flagged(conn, household_id),
+        "preferences": _render_preferences(conn, household_id),
+        "cookbook_index": _render_cookbook_index(conn, household_id),
+    }
+
+
+def build_ritual_swipe_prompt(template: str, ctx: dict) -> str:
+    prompt = template
+    for key, value in ctx.items():
+        prompt = prompt.replace("{" + key + "}", str(value))
+    return prompt
