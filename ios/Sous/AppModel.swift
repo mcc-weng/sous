@@ -286,6 +286,113 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Direct write, no job — matches `toggleShoppingItem`'s precedent. A swipe is a
+    /// pure user action; only a swipe-up *modification* (handled separately, below)
+    /// needs the brain.
+    func recordSwipe(recipeId: UUID?, dishText: String?, action: String,
+                     context: String, note: String?) async {
+        struct NewSwipe: Encodable {
+            let household_id: UUID
+            let recipe_id: UUID?
+            let dish_text: String?
+            let action: String
+            let context: String
+            let note: String?
+        }
+        guard let household else { return }
+        do {
+            try await client.from("recipe_swipes")
+                .insert(NewSwipe(household_id: household.id, recipe_id: recipeId,
+                                 dish_text: dishText, action: action, context: context, note: note))
+                .execute()
+        } catch { print("record swipe: \(error)") }
+    }
+
+    /// Recipe ids passed (not liked) today, in the given context — feeds
+    /// `exploreCandidates`'s exclusion filter.
+    func recentPassedRecipeIds(context: String) async -> Set<UUID> {
+        struct SwipeRow: Decodable { let recipe_id: UUID? }
+        guard let household else { return [] }
+        let tz = TimeZone(identifier: household.timezone) ?? .current
+        do {
+            let rows: [SwipeRow] = try await client.from("recipe_swipes")
+                .select("recipe_id")
+                .eq("household_id", value: household.id)
+                .eq("context", value: context)
+                .eq("action", value: "pass")
+                .gte("created_at", value: dateString(Date(), timezone: tz))
+                .execute().value
+            return Set(rows.compactMap(\.recipe_id))
+        } catch { print("recent passed load: \(error)"); return [] }
+    }
+
+    /// Fires a recipe_tweak job and polls for its result — see Task 5 for the worker
+    /// side. 2s poll, matching `waitForReply`'s established interval. Returns nil on
+    /// timeout/failure; caller (Explore/Ritual) simply doesn't reinsert a card, which
+    /// degrades gracefully (mechanics spec §2.3 never guarantees a reinsert succeeds,
+    /// only that the deck itself is never blocked).
+    func requestRecipeTweak(originRecipeId: UUID?, originDishText: String, note: String,
+                            context: String, date: String?) async -> SwipeCandidate? {
+        struct Payload: Encodable {
+            let origin_recipe_id: UUID?
+            let origin_dish_text: String
+            let note: String
+            let context: String
+            let date: String?
+        }
+        struct NewJob: Encodable {
+            let household_id: UUID
+            let kind: String
+            let payload: Payload
+        }
+        struct JobRow: Decodable { let id: UUID }
+        guard let household else { return nil }
+        do {
+            let job: JobRow = try await client.from("jobs")
+                .insert(NewJob(household_id: household.id, kind: "recipe_tweak",
+                               payload: .init(origin_recipe_id: originRecipeId,
+                                             origin_dish_text: originDishText, note: note,
+                                             context: context, date: date)))
+                .select("id").single().execute().value
+            // SwipeCandidate.modifyNote (added during Task 3's review — carries the
+            // note text for the 已依「...」改過 badge) isn't part of the job result
+            // itself; set it here from the note this call already has, so
+            // SwipeCardView reads the real note instead of its fallback text.
+            guard var revised = await pollJobResult(jobId: job.id) else { return nil }
+            revised.modifyNote = note
+            return revised
+        } catch { print("recipe tweak request: \(error)"); return nil }
+    }
+
+    /// Shared polling helper for both recipe_tweak and ritual swipe_deal/swipe_lock
+    /// (Task 7 also calls this). 2s interval, 90s ceiling — a tweak/deal job's own
+    /// timeout is the worker's chat_timeout_sec (480s) but the UI shouldn't hang the
+    /// deck that long; giving up after 90s just means no reinsert/no deck this attempt,
+    /// never a crash.
+    func pollJobResult(jobId: UUID) async -> SwipeCandidate? {
+        struct JobStatusRow: Decodable { let status: String; let result: JobResultPayload? }
+        struct JobResultPayload: Decodable {
+            let recipe_id: UUID?; let dish_text: String?; let dish_mode: String?
+            let meta: String?; let pitch: String?; let prep_note: String?
+            let shopping_items: [SwipeShoppingItem]?
+        }
+        for _ in 0..<45 { // 45 * 2s = 90s ceiling
+            do {
+                let row: JobStatusRow = try await client.from("jobs")
+                    .select("status,result").eq("id", value: jobId).single().execute().value
+                if row.status == "done", let result = row.result {
+                    return SwipeCandidate(id: UUID(), recipeId: result.recipe_id,
+                                          dishText: result.dish_text ?? "", mode: result.dish_mode,
+                                          meta: result.meta, pitch: result.pitch, prepNote: result.prep_note,
+                                          shoppingItems: result.shopping_items ?? [])
+                }
+                if row.status == "failed" { return nil }
+            } catch { print("poll job result: \(error)") }
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+        }
+        return nil
+    }
+
     /// Upserts the APNs device token once `SousAppDelegate` hands it back via
     /// `.sousDidRegisterDeviceToken`. See the `init()` comment for why this lives on
     /// AppModel rather than `NotificationsSettingsView`.

@@ -16,6 +16,7 @@ struct CounterView: View {
     @State private var showCookbook = false
     @State private var showNotificationsSettings = false
     @State private var showCookModeForTonight = false
+    @State private var showExploreDeck = false
     @State private var showOnboarding = false
     @State private var cookModeRecipe: Recipe?
     @State private var cookModePlanDay: PlanDay?
@@ -55,6 +56,9 @@ struct CounterView: View {
                 .padding(.horizontal, Spacing.pageMargin)
                 .padding(.top, 14)
             tonightSection
+            exploreDeckPeek
+                .padding(.horizontal, Spacing.pageMargin)
+                .padding(.top, 20)
             footerNav
             ChatView()
         }
@@ -74,6 +78,9 @@ struct CounterView: View {
         .task { await model.loadCookbook() }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView().environmentObject(model)
+        }
+        .fullScreenCover(isPresented: $showExploreDeck) {
+            ExploreDeckView().environmentObject(model)
         }
         .onChange(of: model.onboardingRestartRequested) { _, requested in
             guard requested else { return }
@@ -220,6 +227,30 @@ struct CounterView: View {
                     .tracking(1.6) // .16em at 10pt
                     .foregroundStyle(PaperTokens.inkDim)
             )
+    }
+
+    // MARK: 想吃什麼 — Explore Deck (D3) entry point
+
+    private var exploreDeckPeek: some View {
+        Button { showExploreDeck = true } label: {
+            HStack(spacing: 12) {
+                Rectangle().fill(PaperTokens.stockAlt).frame(width: 54, height: 54)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("想吃什麼")
+                        .font(.custom(sansName, size: 10))
+                        .tracking(2)
+                        .foregroundStyle(PaperTokens.inkFaint)
+                    Text("滑一下,我記著")
+                        .font(.custom(serifName, size: 14.5))
+                        .foregroundStyle(PaperTokens.ink)
+                }
+                Spacer()
+                Image(systemName: "arrow.right").foregroundStyle(model.personaTint)
+            }
+            .padding(14)
+            .overlay(Rectangle().stroke(PaperTokens.rule, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Footer — the four destinations
