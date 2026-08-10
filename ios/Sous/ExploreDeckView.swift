@@ -15,6 +15,7 @@ struct ExploreDeckView: View {
                 Text("探索牌組").font(.custom(serifFontName(bundled: FontBook.isSerifBundled), size: 17))
                 Spacer()
                 Button("關閉") { dismiss() }
+                    .frame(minWidth: 44, minHeight: 44)
             }
             .padding(.horizontal, Spacing.pageMargin)
             .padding(.top, Spacing.md)
