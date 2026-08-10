@@ -316,3 +316,31 @@ def test_build_notif_verdict_prompt_substitutes_dish(conn, api_hid):
     prompt = context.build_notif_verdict_prompt(template, ctx)
     assert "咖哩飯" in prompt
     assert "{" not in prompt.replace("{}", "")
+
+
+def test_fetch_recipe_tweak_context_includes_origin_and_note(conn, api_hid):
+    ctx = context.fetch_recipe_tweak_context(
+        conn, api_hid, origin_dish_text="三杯雞", note="沒有蝦", origin_recipe_id=None,
+    )
+    assert ctx["origin_dish_text"] == "三杯雞"
+    assert ctx["note"] == "沒有蝦"
+    assert "preferences" in ctx  # allergies-are-absolute still applies to a tweak
+
+
+def test_build_recipe_tweak_prompt_substitutes_all_placeholders():
+    template = "{origin_dish_text} / {note} / {preferences}"
+    ctx = {"origin_dish_text": "三杯雞", "note": "沒有蝦", "preferences": "無"}
+    prompt = context.build_recipe_tweak_prompt(template, ctx)
+    assert prompt == "三杯雞 / 沒有蝦 / 無"
+
+
+def test_fetch_recipe_tweak_context_includes_persona_and_date(conn, api_hid):
+    # Every other fetch_*_context/build_*_prompt pair in this file sources
+    # {persona_pack}/{today}/{weekday} from db.get_household so the persona layer
+    # (project rule: zero hardcoded persona strings) always renders — recipe_tweak
+    # must not be the one job kind that silently drops persona_pack from the prompt.
+    ctx = context.fetch_recipe_tweak_context(
+        conn, api_hid, origin_dish_text="三杯雞", note="沒有蝦", origin_recipe_id=None,
+    )
+    assert "小當家" in ctx["persona_pack"]
+    assert ctx["today"] and ctx["weekday"]

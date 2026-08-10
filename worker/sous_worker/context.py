@@ -298,3 +298,32 @@ def build_recipe_intake_prompt(template: str, ctx: dict, url: str, by: str,
         .replace("{by}", by)
         .replace("{prefetched_context}", _render_prefetch(prefetch))
     )
+
+
+def fetch_recipe_tweak_context(conn, household_id: str, origin_dish_text: str,
+                               note: str, origin_recipe_id: str | None) -> dict:
+    """origin_recipe_id is accepted (mirrors the payload shape Task 4's client
+    sends) but not otherwise used yet — a tweak only needs the origin dish's
+    text and the household's note/preferences, not a recipes-table lookup.
+
+    Returns a flat dict (not the nested {"household": ...} shape the other
+    fetch_*_context functions use) because build_recipe_tweak_prompt below is a
+    generic key-by-key substitution, not a per-field .replace() chain — every
+    key here must be a template placeholder name."""
+    household = db.get_household(conn, household_id)
+    now = datetime.datetime.now(ZoneInfo(household["timezone"]))
+    return {
+        "persona_pack": household["prompt_pack"],
+        "today": now.strftime("%Y-%m-%d"),
+        "weekday": _WEEKDAYS_ZH[now.weekday()],
+        "origin_dish_text": origin_dish_text,
+        "note": note,
+        "preferences": _render_preferences(conn, household_id),
+    }
+
+
+def build_recipe_tweak_prompt(template: str, ctx: dict) -> str:
+    prompt = template
+    for key, value in ctx.items():
+        prompt = prompt.replace("{" + key + "}", str(value))
+    return prompt

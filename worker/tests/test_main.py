@@ -405,3 +405,70 @@ def test_notif_generate_unknown_notif_kind_fails_cleanly(conn):
         "select status, result from jobs where id=%s", (jid,)
     ).fetchone()
     assert status == "failed" and "unknown notif_kind" in result["error"]
+
+
+import json
+
+
+def _make_household(conn) -> str:
+    """A dedicated household (not SANDBOX) so the "no chat_messages row" assertion
+    below can't accidentally pass because some *other* test's chat traffic landed
+    in the same household — mirrors tests/test_context.py's api_hid fixture."""
+    return conn.execute(
+        "insert into households (name, persona_id) "
+        "select 'recipe-tweak-test', id from personas limit 1 returning id::text"
+    ).fetchone()[0]
+
+
+def test_process_one_recipe_tweak_writes_result_no_chat_message(conn, monkeypatch):
+    hid = _make_household(conn)
+    try:
+        job_id = conn.execute(
+            "insert into jobs (household_id, kind, payload) values (%s, 'recipe_tweak', %s) "
+            "returning id::text",
+            (hid, Jsonb({"origin_recipe_id": None, "origin_dish_text": "三杯雞",
+                         "note": "沒有蝦", "context": "ritual", "date": "2026-08-17"})),
+        ).fetchone()[0]
+        monkeypatch.setattr(
+            main, "generate_recipe_tweak_reply",
+            lambda *a, **kw: json.dumps({
+                "recipe_id": None, "dish_text": "無蝦三杯雞", "dish_mode": "fast",
+                "meta": "~25分", "pitch": "拿掉蝦照樣香", "prep_note": None,
+                "shopping_items": [],
+            }),
+        )
+        assert main.process_one(conn, main.load_config()) is True
+        row = conn.execute("select status, result from jobs where id=%s", (job_id,)).fetchone()
+        assert row[0] == "done"
+        assert row[1]["dish_text"] == "無蝦三杯雞"
+        messages = conn.execute(
+            "select count(*) from chat_messages where household_id=%s", (hid,)
+        ).fetchone()[0]
+        assert messages == 0
+    finally:
+        conn.execute("delete from households where id = %s", (hid,))
+
+
+def test_process_one_recipe_tweak_bad_json_fails_with_preview(conn, monkeypatch):
+    # Malformed-reply-from-the-brain must not crash the worker uninformatively —
+    # process_one's except-branch catches the raised ValueError like any other
+    # job failure, and the truncated reply preview lands in jobs.result.error.
+    hid = _make_household(conn)
+    try:
+        job_id = conn.execute(
+            "insert into jobs (household_id, kind, payload) values (%s, 'recipe_tweak', %s) "
+            "returning id::text",
+            (hid, Jsonb({"origin_recipe_id": None, "origin_dish_text": "三杯雞",
+                         "note": "沒有蝦", "context": "ritual", "date": "2026-08-17"})),
+        ).fetchone()[0]
+        monkeypatch.setattr(main, "generate_recipe_tweak_reply",
+                            lambda *a, **kw: "not json at all")
+        cfg = main.load_config() | {"max_attempts": 1}
+        main.process_one(conn, cfg)
+        status, result = conn.execute(
+            "select status, result from jobs where id=%s", (job_id,)
+        ).fetchone()
+        assert status == "failed"
+        assert "not valid JSON" in result["error"]
+    finally:
+        conn.execute("delete from households where id = %s", (hid,))

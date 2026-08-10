@@ -96,6 +96,24 @@ def generate_recipe_intake_reply(conn, job: db.Job, cfg: dict) -> str:
                            extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
 
 
+def generate_recipe_tweak_reply(conn, job: db.Job, cfg: dict) -> str:
+    """recipe_tweak: single-shot, no chat message — the brain's entire reply is the
+    revised-candidate JSON, parsed and written straight to jobs.result (process_one's
+    else-branch below), not shown to the user as a chat line."""
+    payload = job.payload
+    ctx = context.fetch_recipe_tweak_context(
+        conn, job.household_id, origin_dish_text=payload["origin_dish_text"],
+        note=payload["note"], origin_recipe_id=payload.get("origin_recipe_id"),
+    )
+    template = (ROOT / "prompts" / "recipe_tweak.md").read_text()
+    prompt = context.build_recipe_tweak_prompt(template, ctx)
+    return brain.run_brain(prompt, model=cfg["chat_model"],
+                           timeout=cfg["recipe_tweak_timeout_sec"],
+                           allowed_tools=cfg["recipe_tweak_allowed_tools"],
+                           cwd=str(ROOT),
+                           extra_env={"SOUS_HOUSEHOLD_ID": job.household_id})
+
+
 def generate_notif_reply(conn, job: db.Job, cfg: dict) -> str:
     """notif_generate has two payload shapes, distinguished by notif_kind:
     'week_batch' (Task 3, this function's only branch so far) and 'verdict_action'
@@ -135,15 +153,25 @@ def process_one(conn, cfg: dict) -> bool:
         elif job.kind == "recipe_intake":
             mode = "recipe_intake"
             reply = generate_recipe_intake_reply(conn, job, cfg)
+        elif job.kind == "recipe_tweak":
+            mode = "recipe_tweak"
+            reply = generate_recipe_tweak_reply(conn, job, cfg)
         elif job.kind == "notif_generate":
             mode = "notif_generate"
             reply = generate_notif_reply(conn, job, cfg)
         else:
             raise ValueError(f"unknown job kind: {job.kind}")
         with conn.transaction():
-            if job.kind != "notif_generate":
-                db.insert_chef_message(conn, job.household_id, reply, job.id)
-            db.complete_job(conn, job.id, {"reply_chars": len(reply), "mode": mode})
+            if job.kind == "recipe_tweak":
+                try:
+                    parsed = json.loads(reply)
+                except json.JSONDecodeError:
+                    raise ValueError(f"recipe_tweak reply was not valid JSON: {reply[:200]!r}")
+                db.complete_job(conn, job.id, parsed)
+            else:
+                if job.kind != "notif_generate":
+                    db.insert_chef_message(conn, job.household_id, reply, job.id)
+                db.complete_job(conn, job.id, {"reply_chars": len(reply), "mode": mode})
     except Exception as exc:  # noqa: BLE001 — worker must never die on one job
         log.exception("job %s failed (attempt %d)", job.id, job.attempts)
         if job.attempts >= cfg["max_attempts"]:
