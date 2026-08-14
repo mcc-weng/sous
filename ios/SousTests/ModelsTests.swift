@@ -53,4 +53,25 @@ final class ModelsTests: XCTestCase {
         decoder.dateDecodingStrategy = .iso8601
         XCTAssertNoThrow(try decoder.decode(Recipe.self, from: json))
     }
+
+    // MARK: - weekdayGlyph
+
+    func testWeekdayGlyphOnMonday() throws {
+        // 2026-08-17 is a Monday.
+        XCTAssertEqual(weekdayGlyph(for: "2026-08-17", timezone: .current), "一")
+    }
+
+    func testWeekdayGlyphOnSunday() throws {
+        // 2026-08-16 is a Sunday — glyph table wraps back to "日".
+        XCTAssertEqual(weekdayGlyph(for: "2026-08-16", timezone: .current), "日")
+    }
+
+    func testWeekdayGlyphOnSaturday() throws {
+        // 2026-08-22 is a Saturday, the last entry in the glyph table.
+        XCTAssertEqual(weekdayGlyph(for: "2026-08-22", timezone: .current), "六")
+    }
+
+    func testWeekdayGlyphReturnsEmptyStringForMalformedDate() throws {
+        XCTAssertEqual(weekdayGlyph(for: "not-a-date", timezone: .current), "")
+    }
 }

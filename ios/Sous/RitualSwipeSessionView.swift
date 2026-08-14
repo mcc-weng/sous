@@ -30,7 +30,7 @@ struct RitualSwipeSessionView: View {
             case .locking:
                 lockCard(showProgress: true)
             case .dealing:
-                if confirmed.count == days.count, days.count == 7 {
+                if isWeekReadyToLock(dayCount: days.count, confirmedCount: confirmed.count) {
                     lockCard(showProgress: false)
                 } else if let day = days[safe: dayIndex] {
                     if deck.candidates.isEmpty {
@@ -155,7 +155,7 @@ struct RitualSwipeSessionView: View {
             return
         }
         days = result
-        dayIndex = firstOpenDayIndex(in: result)
+        dayIndex = firstOpenDayIndex(dates: result.map(\.date), confirmed: Set(confirmed.keys))
         deck = SwipeDeckState(candidates: result[dayIndex].candidates, pendingReinserts: [])
         phase = .dealing
     }
@@ -174,10 +174,6 @@ struct RitualSwipeSessionView: View {
         phase = .dealing
     }
 
-    private func firstOpenDayIndex(in result: [AppModel.SwipeDeckDay]) -> Int {
-        result.firstIndex(where: { confirmed[$0.date] == nil }) ?? 0
-    }
-
     private func handleSwipe(_ candidate: SwipeCandidate, _ direction: SwipeDirection,
                              day: AppModel.SwipeDeckDay) {
         guard direction != .modify else { return }
@@ -189,7 +185,12 @@ struct RitualSwipeSessionView: View {
         }
         if direction == .like {
             confirmed[day.date] = candidate
-            advanceDay()
+        }
+        let nextIndex = dayIndexAfterSwipe(direction: direction, dates: days.map(\.date),
+                                           confirmedAfterSwipe: Set(confirmed.keys), currentIndex: dayIndex)
+        if nextIndex != dayIndex {
+            dayIndex = nextIndex
+            deck = SwipeDeckState(candidates: days[nextIndex].candidates, pendingReinserts: [])
         }
     }
 
@@ -215,13 +216,6 @@ struct RitualSwipeSessionView: View {
         } else {
             deck.scheduleReinsert(candidate, afterCards: min(3, deck.candidates.count))
         }
-    }
-
-    private func advanceDay() {
-        guard let next = days.indices.dropFirst(dayIndex + 1)
-            .first(where: { confirmed[days[$0].date] == nil }) else { return }
-        dayIndex = next
-        deck = SwipeDeckState(candidates: days[next].candidates, pendingReinserts: [])
     }
 
     private func lockWeek() async {

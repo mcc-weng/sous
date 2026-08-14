@@ -514,6 +514,38 @@ def test_process_one_recipe_tweak_bad_json_fails_with_preview(conn, monkeypatch)
         conn.execute("delete from households where id = %s", (hid,))
 
 
+def test_process_one_ritual_swipe_deal_bad_json_fails_without_apology(conn, monkeypatch):
+    # Mirrors test_process_one_recipe_tweak_bad_json_fails_with_preview above —
+    # _apologize was widened (main.py:27-39) to also suppress the failure-path chat
+    # apology for ritual jobs whose payload.mode is swipe_deal/swipe_lock, on the
+    # same "no matching chat request" rationale as recipe_tweak: iOS drives its own
+    # failure UI for the swipe ritual, so injecting a chat apology would surface in
+    # an unrelated conversation. That recipe_tweak branch already has a regression
+    # test; this covers the ritual+swipe_deal branch of the same conditional, which
+    # didn't have one.
+    hid = _make_household(conn)
+    try:
+        job_id = conn.execute(
+            "insert into jobs (household_id, kind, payload) values (%s, 'ritual', %s) "
+            "returning id::text",
+            (hid, Jsonb({"mode": "swipe_deal"})),
+        ).fetchone()[0]
+        monkeypatch.setattr(main, "generate_ritual_swipe_deal_reply",
+                            lambda *a, **kw: "not json at all")
+        cfg = main.load_config() | {"max_attempts": 1}
+        main.process_one(conn, cfg)
+        status, result = conn.execute(
+            "select status, result from jobs where id=%s", (job_id,)
+        ).fetchone()
+        assert status == "failed"
+        assert "not valid JSON" in result["error"]
+        assert conn.execute(
+            "select count(*) from chat_messages where household_id=%s", (hid,)
+        ).fetchone()[0] == 0
+    finally:
+        conn.execute("delete from households where id = %s", (hid,))
+
+
 from zoneinfo import ZoneInfo
 
 
