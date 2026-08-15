@@ -43,3 +43,21 @@ func dayIndexAfterSwipe(direction: SwipeDirection, dates: [String],
 func isWeekReadyToLock(dayCount: Int, confirmedCount: Int) -> Bool {
     confirmedCount == dayCount && dayCount == 7
 }
+
+/// Flattens the week's confirmed candidates' shopping items into one deduped list,
+/// keeping the first occurrence of each name. Two confirmed days can independently
+/// need the same ingredient (e.g. two dishes both calling for garlic); sending both
+/// straight through to `set_plan`'s per-item insert trips the
+/// `shopping_items_household_name_unchecked` partial unique index (household_id,
+/// lower(name) where checked = false — migration 0003) and fails the whole
+/// `swipe_lock` job. Dedup key matches that index exactly: case-insensitive name
+/// only, not qty/section — a later duplicate's qty/section is simply dropped.
+func dedupedShoppingItems(_ items: [SwipeShoppingItem]) -> [SwipeShoppingItem] {
+    var seenNames = Set<String>()
+    return items.filter { item in
+        let key = item.name.lowercased()
+        guard !seenNames.contains(key) else { return false }
+        seenNames.insert(key)
+        return true
+    }
+}

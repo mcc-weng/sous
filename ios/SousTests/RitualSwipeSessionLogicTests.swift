@@ -95,4 +95,37 @@ final class RitualSwipeSessionLogicTests: XCTestCase {
         // Guards against a dev/test week with fewer than 7 days looking "ready".
         XCTAssertFalse(isWeekReadyToLock(dayCount: 3, confirmedCount: 3))
     }
+
+    // MARK: - dedupedShoppingItems
+
+    func testDedupedShoppingItemsKeepsUniqueNames() {
+        let items = [SwipeShoppingItem(name: "garlic", qty: "2瓣", section: "produce"),
+                     SwipeShoppingItem(name: "醬油", qty: "1瓶", section: "pantry")]
+        XCTAssertEqual(dedupedShoppingItems(items), items)
+    }
+
+    func testDedupedShoppingItemsDropsCaseInsensitiveDuplicate() {
+        // Two confirmed days both need garlic — the second entry, differently
+        // cased, would otherwise trip the household_id+lower(name) partial
+        // unique index at lock time (migration 0003).
+        let items = [SwipeShoppingItem(name: "garlic", qty: "2瓣", section: "produce"),
+                     SwipeShoppingItem(name: "Garlic", qty: "3瓣", section: "produce")]
+        XCTAssertEqual(dedupedShoppingItems(items),
+                       [SwipeShoppingItem(name: "garlic", qty: "2瓣", section: "produce")])
+    }
+
+    func testDedupedShoppingItemsKeepsFirstOccurrenceAcrossDays() {
+        let items = [SwipeShoppingItem(name: "蔥", qty: "1把", section: "produce"),
+                     SwipeShoppingItem(name: "garlic", qty: "2瓣", section: "produce"),
+                     SwipeShoppingItem(name: "GARLIC", qty: "5瓣", section: "produce"),
+                     SwipeShoppingItem(name: "醬油", qty: "1瓶", section: "pantry")]
+        XCTAssertEqual(dedupedShoppingItems(items),
+                       [SwipeShoppingItem(name: "蔥", qty: "1把", section: "produce"),
+                        SwipeShoppingItem(name: "garlic", qty: "2瓣", section: "produce"),
+                        SwipeShoppingItem(name: "醬油", qty: "1瓶", section: "pantry")])
+    }
+
+    func testDedupedShoppingItemsEmptyInputIsEmptyOutput() {
+        XCTAssertEqual(dedupedShoppingItems([]), [])
+    }
 }

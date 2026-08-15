@@ -225,7 +225,7 @@ struct RitualSwipeSessionView: View {
             return .init(date: day.date, dish: chosen.dishText,
                          mode: chosen.mode ?? "fast", prep_note: chosen.prepNote)
         }
-        let shopping = days.compactMap { confirmed[$0.date] }.flatMap(\.shoppingItems)
+        let shopping = dedupedShoppingItems(days.compactMap { confirmed[$0.date] }.flatMap(\.shoppingItems))
         if await model.submitSwipeLock(days: payload, shoppingItems: shopping) {
             dismiss()
         } else {

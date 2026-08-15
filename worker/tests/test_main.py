@@ -686,3 +686,47 @@ def test_process_one_ritual_swipe_deal_does_not_enqueue_notifications(conn, monk
         assert called["hit"] is False
     finally:
         conn.execute("delete from households where id = %s", (hid,))
+
+
+def test_process_one_ritual_swipe_lock_writes_shopping_items(conn, monkeypatch):
+    # A caller that has already deduped its shopping list (as iOS's lockWeek()
+    # does post-fix — see RitualSwipeSessionLogic.dedupedShoppingItems) must be
+    # able to lock a week with a non-empty shopping list without tripping the
+    # `shopping_items_household_name_unchecked` partial unique index (migration
+    # 0003). The existing swipe_lock tests above only ever send `[]`, so this is
+    # the first coverage of set_plan's shopping_items insert path on the swipe
+    # branch at all.
+    #
+    # NB: this test does NOT send raw duplicate names in the payload. Confirmed
+    # empirically (see final-review-fix-report.md) that state_api.set_plan has
+    # no ON CONFLICT handling on shopping_items — two same-name (case-
+    # insensitive) items in one payload still raise a UniqueViolation here and
+    # the job never reaches 'done'. The reviewer's chosen fix is iOS-only
+    # (dedupe before send); this test instead proves the worker/state_api layer
+    # correctly handles the payload shape a fixed client actually sends.
+    hid = _make_household(conn)
+    try:
+        week_of = _next_target_week_of()
+        conn.execute(
+            "insert into plan_weeks (household_id, week_of, status) values (%s, %s, 'proposing')",
+            (hid, week_of),
+        )
+        days = [{"date": (week_of + datetime.timedelta(days=i)).isoformat(),
+                 "dish": f"菜{i}", "mode": "fast"} for i in range(7)]
+        shopping = [{"name": "garlic", "qty": "2瓣", "section": "produce"},
+                    {"name": "醬油", "qty": "1瓶", "section": "pantry"}]
+        job_id = conn.execute(
+            "insert into jobs (household_id, kind, payload) values (%s, 'ritual', %s) "
+            "returning id::text",
+            (hid, Jsonb({"mode": "swipe_lock", "days": days, "shopping_items": shopping})),
+        ).fetchone()[0]
+        assert main.process_one(conn, main.load_config()) is True
+        status = conn.execute("select status from jobs where id=%s", (job_id,)).fetchone()[0]
+        assert status == "done"
+        names = {row[0] for row in conn.execute(
+            "select name from shopping_items si join plan_weeks pw on pw.id = si.week_id "
+            "where pw.household_id = %s and pw.week_of = %s", (hid, week_of),
+        ).fetchall()}
+        assert names == {"garlic", "醬油"}
+    finally:
+        conn.execute("delete from households where id = %s", (hid,))
